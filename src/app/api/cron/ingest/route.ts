@@ -9,6 +9,8 @@ import { FacebookAdapter } from '@/lib/adapters/facebook.adapter';
 import { TwitterAdapter } from '@/lib/adapters/twitter.adapter';
 import { RedditAdapter } from '@/lib/adapters/reddit.adapter';
 
+export const dynamic = 'force-dynamic';
+
 const rssAdapter = new RSSAdapter();
 const ytAdapter = new YouTubeAdapter();
 const instagramAdapter = new InstagramAdapter();

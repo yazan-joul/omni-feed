@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { RSSAdapter } from '@/lib/adapters/rss.adapter';
 import { YouTubeAdapter } from '@/lib/adapters/youtube.adapter';
 
+export const dynamic = 'force-dynamic';
+
 const rssAdapter = new RSSAdapter();
 const ytAdapter = new YouTubeAdapter();
 

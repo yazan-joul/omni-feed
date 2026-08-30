@@ -3,6 +3,8 @@ import { XMLParser } from 'fast-xml-parser';
 import { FeedSource } from '@/lib/types';
 import { DEFAULT_FEED_SOURCES } from '@/lib/config/default-sources';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const contentType = request.headers.get('content-type') || '';

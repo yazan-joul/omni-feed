@@ -1,36 +1,66 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, Firestore } from 'firebase-admin/firestore';
 
-if (!getApps().length) {
-  try {
+function initFirebase() {
+  if (!getApps().length) {
     const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
     if (!serviceAccountJson) {
-      throw new Error('FIREBASE_SERVICE_ACCOUNT is not set in environment variables');
+      console.warn('[Firebase Admin] FIREBASE_SERVICE_ACCOUNT is not set in environment variables');
+      return null;
     }
-    let raw = serviceAccountJson.trim();
-    if (raw.startsWith('"') && raw.endsWith('"')) {
-      try {
-        raw = JSON.parse(raw);
-      } catch {}
+    try {
+      let raw = serviceAccountJson.trim();
+      if (raw.startsWith('"') && raw.endsWith('"')) {
+        try {
+          raw = JSON.parse(raw);
+        } catch {}
+      }
+      const serviceAccount = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      if (serviceAccount.private_key) {
+        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+      }
+      
+      const app = initializeApp({
+        credential: cert(serviceAccount)
+      });
+      console.log('[Firebase Admin] Initialized successfully');
+      return app;
+    } catch (error) {
+      console.error('[Firebase Admin] Initialization error', error);
+      return null;
     }
-    const serviceAccount = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    if (serviceAccount.private_key) {
-      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
-    }
-    
-    initializeApp({
-      credential: cert(serviceAccount)
-    });
-    console.log('[Firebase Admin] Initialized successfully');
-  } catch (error) {
-    console.error('[Firebase Admin] Initialization error', error);
   }
+  return getApps()[0];
 }
 
-const db = getFirestore();
-try {
-  db.settings({ ignoreUndefinedProperties: true });
-} catch (e) {
-  // Already configured during HMR, ignore
+let _db: Firestore | null = null;
+
+export function getDb(): Firestore {
+  if (!_db) {
+    initFirebase();
+    if (getApps().length > 0) {
+      _db = getFirestore();
+      try {
+        _db.settings({ ignoreUndefinedProperties: true });
+      } catch (e) {
+        // Already configured, ignore
+      }
+    } else {
+      throw new Error('Firebase app is not initialized. Please configure FIREBASE_SERVICE_ACCOUNT.');
+    }
+  }
+  return _db;
 }
-export { db };
+
+// Proxy export for backward compatibility so `db.collection(...)` works safely at runtime
+export const db = new Proxy({} as Firestore, {
+  get(target, prop, receiver) {
+    const realDb = getDb();
+    const value = Reflect.get(realDb, prop, receiver);
+    if (typeof value === 'function') {
+      return value.bind(realDb);
+    }
+    return value;
+  }
+});
+

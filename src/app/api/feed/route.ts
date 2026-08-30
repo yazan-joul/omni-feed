@@ -3,6 +3,7 @@ import { db } from '@/lib/firebase/admin';
 import { FeedItem } from '@/lib/types';
 import { DEFAULT_FEED_SOURCES } from '@/lib/config/default-sources';
 
+export const dynamic = 'force-dynamic';
 export const revalidate = 60; // Cache for 60 seconds
 
 export async function GET(request: NextRequest) {
