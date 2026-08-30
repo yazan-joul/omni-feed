@@ -13,7 +13,6 @@ import {
   Youtube,
   Rss,
   Terminal,
-  Headphones,
   Clock,
   Layers,
   CheckCheck,
@@ -106,46 +105,6 @@ export function FilterBar({
         </div>
 
         {/* Media Type & View Mode Controls */}
-<<<<<<< HEAD
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-          {/* Media Type Filter */}
-          <div className="flex items-center p-1 rounded-xl bg-slate-900/60 border border-white/10 text-xs">
-            <button
-              onClick={() => setSelectedMediaType('all')}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
-                selectedMediaType === 'all' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              All
-            </button>
-            <button
-              onClick={() => setSelectedMediaType('video')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all ${
-                selectedMediaType === 'video' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Video className="w-3.5 h-3.5" />
-              Videos
-            </button>
-            <button
-              onClick={() => setSelectedMediaType('podcast')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all ${
-                selectedMediaType === 'podcast' ? 'bg-amber-600 text-white' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Headphones className="w-3.5 h-3.5" />
-              Podcasts
-            </button>
-            <button
-              onClick={() => setSelectedMediaType('article')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all ${
-                selectedMediaType === 'article' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <FileText className="w-3.5 h-3.5" />
-              Articles
-            </button>
-=======
         <div className="flex w-full items-center gap-2 md:w-auto">
           {/* Media Type Filter */}
           <div className="min-w-0 flex-1 overflow-x-auto scrollbar-none rounded-xl border border-white/10 bg-slate-900/60 p-1 text-xs md:flex-none">
@@ -186,7 +145,6 @@ export function FilterBar({
                 Articles
               </button>
             </div>
->>>>>>> origin/alona
           </div>
 
           {/* View Mode Grid/List */}

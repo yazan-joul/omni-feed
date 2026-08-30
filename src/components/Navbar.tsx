@@ -57,11 +57,6 @@ export function Navbar({
             </div>
           </div>
         </div>
-          </div>
-          <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-violet-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent">
-            OmniFeed
-          </span>
-        </div>
 
         {/* Center: Main Navigation Tabs */}
         <div className="hidden md:flex items-center p-1 rounded-xl bg-slate-900/60 border border-white/10">

@@ -101,7 +101,7 @@ setTimeout(async () => {
     assert.strictEqual(item.mediaType, 'podcast');
     assert.strictEqual(item.title, 'Episode 1 & Only'); // decoded
     assert.strictEqual(item.audioUrl, 'https://example.com/episode1.mp3');
-    assert.strictEqual(item.duration, '45:30');
+    assert.strictEqual(item.durationSeconds, 2730);
     assert.strictEqual(item.thumbnailUrl, 'https://example.com/cover.jpg');
     assert.strictEqual(item.summary, 'This is a "great" episode....'); // decoded and trimmed
     
