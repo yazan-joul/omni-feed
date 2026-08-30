@@ -187,9 +187,11 @@ export async function GET(request: NextRequest) {
 
     // 2. STALE HIT
     if (cachedData && isStale) {
-      after(async () => {
-        await revalidate().catch(console.error);
-      });
+      if (!isSocial) {
+        after(async () => {
+          await revalidate().catch(console.error);
+        });
+      }
       return { items: cachedData, sourceName: source.name, failed: false };
     }
 

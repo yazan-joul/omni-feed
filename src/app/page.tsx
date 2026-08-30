@@ -168,10 +168,24 @@ export default function HomePage() {
   const handleRefreshPlatform = async (platform: ContentPlatform) => {
     setIsLoading(true);
     try {
-      await fetch(`/api/feed?platform=${platform}&forceRefresh=true`);
-      await fetchFeed();
+      const res = await fetch(`/api/feed?platform=${platform}&forceRefresh=true`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.items)) {
+          setFeedItems((prev) => {
+            const others = prev.filter((i) => i.platform !== platform);
+            const merged = [...others, ...data.items];
+            merged.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+            return merged;
+          });
+          if (data.failedSources) {
+            setFailedSources((prev) => Array.from(new Set([...prev, ...data.failedSources])));
+          }
+        }
+      }
     } catch (err) {
       console.error('Error refreshing platform:', err);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -396,11 +410,9 @@ export default function HomePage() {
         onClose={() => setIsAddModalOpen(false)}
         onAddSource={(source) => {
           addSource(source);
-          fetchFeed();
         }}
         onImportSources={(imported) => {
           importSources(imported);
-          fetchFeed();
         }}
       />
 
@@ -411,20 +423,16 @@ export default function HomePage() {
         sources={sources}
         onToggleSource={(id) => {
           toggleSource(id);
-          fetchFeed();
         }}
         onRemoveSource={(id) => {
           removeSource(id);
-          fetchFeed();
         }}
         onResetSources={() => {
           resetToDefault();
-          fetchFeed();
         }}
         onOpenAddModal={() => setIsAddModalOpen(true)}
         onImportSources={(imported) => {
           importSources(imported);
-          fetchFeed();
         }}
       />
 
