@@ -43,8 +43,8 @@ export interface FeedItem {
   sourceName: string;
   sourceId: string;
   videoId?: string; // YouTube specific ID for instant embed
-  audioUrl?: string; // Podcast direct mp3 link
-  duration?: string; // Podcast duration
+  audioUrl?: string; // Podcast enclosure URL when present on RSS feeds
+  durationSeconds?: number; // Podcast runtime when present in RSS metadata
   isCustom?: boolean;
 }
 

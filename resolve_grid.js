@@ -1,71 +1,10 @@
-'use client';
+const fs = require('fs');
 
-import React from 'react';
-import { FeedItem } from '@/lib/types';
-import { FeedCard } from './FeedCard';
-import { Inbox, Sparkles, Plus, AlertTriangle } from 'lucide-react';
+let content = fs.readFileSync('src/components/FeedGrid.tsx', 'utf-8');
 
-interface FeedGridProps {
-  items: FeedItem[];
-  isLoading: boolean;
-  viewMode: 'grid' | 'list';
-  isBookmarked: (id: string) => boolean;
-  isRead: (id: string) => boolean;
-  onToggleBookmark: (item: FeedItem) => void;
-  onToggleRead?: (id: string) => void;
-  onOpenVideo: (item: FeedItem) => void;
-  onOpenReader: (item: FeedItem) => void;
-  onOpenPodcast: (item: FeedItem) => void;
-  onResetFilters?: () => void;
-  onOpenAddModal?: () => void;
-  failedSources?: string[];
-}
-
-export function FeedGrid({
-  items,
-  isLoading,
-  viewMode,
-  isBookmarked,
-  isRead,
-  onToggleBookmark,
-  onToggleRead,
-  onOpenVideo,
-  onOpenReader,
-  onOpenPodcast,
-  onResetFilters,
-  onOpenAddModal,
-  failedSources = [],
-}: FeedGridProps) {
-  // Skeleton loading state
-  if (isLoading && items.length === 0) {
-    return (
-      <div
-        className={
-          viewMode === 'grid'
-            ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5'
-            : 'space-y-4'
-        }
-      >
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div
-            key={i}
-            className="glass-panel rounded-2xl p-4 space-y-3 animate-pulse border border-white/5"
-          >
-            <div className="aspect-video w-full rounded-xl bg-slate-800/60" />
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full bg-slate-800" />
-              <div className="h-3 w-24 rounded bg-slate-800" />
-            </div>
-            <div className="h-4 w-5/6 rounded bg-slate-800" />
-            <div className="h-3 w-full rounded bg-slate-800/60" />
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
+content = content.replace(
+/<<<<<<< HEAD[\s\S]*?>>>>>>> origin\/alona/,
+`    <div className="space-y-4">
       {failedSources.length > 0 && (
         <div className="p-4 rounded-2xl bg-amber-950/40 border border-amber-500/20 flex items-start gap-3 text-amber-200">
           <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
@@ -131,7 +70,7 @@ export function FeedGrid({
             />
           ))}
         </div>
-      )}
-    </div>
-  );
-}
+      )}`
+);
+
+fs.writeFileSync('src/components/FeedGrid.tsx', content);
