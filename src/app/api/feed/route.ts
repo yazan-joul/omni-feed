@@ -17,12 +17,12 @@ const facebookAdapter = new FacebookAdapter();
 const twitterAdapter = new TwitterAdapter();
 const redditAdapter = new RedditAdapter();
 
-// Limit social actor concurrency to max 3 concurrent runs to respect Apify limits
+// Limit social actor concurrency to max 4 concurrent runs to respect Apify limits
 let socialRunning = 0;
 const socialQueue: (() => void)[] = [];
 
 const acquireSocialLock = async (): Promise<void> => {
-  if (socialRunning < 3) {
+  if (socialRunning < 4) {
     socialRunning++;
     return;
   }
@@ -36,7 +36,7 @@ const acquireSocialLock = async (): Promise<void> => {
 
 const releaseSocialLock = () => {
   socialRunning = Math.max(0, socialRunning - 1);
-  if (socialQueue.length > 0 && socialRunning < 3) {
+  if (socialQueue.length > 0 && socialRunning < 4) {
     const next = socialQueue.shift();
     if (next) next();
   }
@@ -116,16 +116,16 @@ export async function GET(request: NextRequest) {
     const isFacebook = source.platform === 'facebook';
     const isTwitter = source.platform === 'twitter';
     const isReddit = source.platform === 'reddit';
-    const isSocial = isInstagram || isFacebook || isTwitter || isReddit;
+    const isSocial = isInstagram || isFacebook || isTwitter;
 
     // Background fetch function to re-ingest and update cache
-    const revalidate = async (): Promise<FeedItem[]> => {
+    const revalidateSource = async (): Promise<FeedItem[]> => {
       if (isSocial) {
         await acquireSocialLock();
       }
 
       try {
-        const timeoutMs = isSocial ? 50000 : 8000;
+        const timeoutMs = isSocial ? 30000 : 10000;
         const fetchItems = async () => {
           if (source.platform === 'youtube') {
             return await ytAdapter.fetchFeed(source);
@@ -144,9 +144,9 @@ export async function GET(request: NextRequest) {
 
         const items: FeedItem[] = await fetchWithTimeout(fetchItems(), timeoutMs, source.name);
         
-        if (items.length > 0) {
-          // BMAD Strategy: 6 hours TTL for Apify/Social, 3 minutes for standard RSS/YouTube
-          const ttlMs = isSocial ? 1000 * 60 * 60 * 6 : 1000 * 60 * 3;
+        if (items && items.length > 0) {
+          // BMAD Strategy: 6 hours TTL for Apify/Social, 5 minutes for standard RSS/YouTube/Reddit
+          const ttlMs = isSocial ? 1000 * 60 * 60 * 6 : 1000 * 60 * 5;
           feedCache.set(cacheKey, items, ttlMs);
         }
         return items;
@@ -163,11 +163,11 @@ export async function GET(request: NextRequest) {
     // If forceRefresh is requested, bypass cache entirely
     if (forceRefresh) {
       try {
-        const freshItems = await revalidate();
-        return { items: freshItems || [], sourceName: source.name, failed: freshItems?.length === 0 };
+        const freshItems = await revalidateSource();
+        return { items: freshItems || [], sourceName: source.name, failed: false };
       } catch (err: any) {
         console.warn(`[Force Refresh] ${source.name}:`, err.message);
-        return { items: cachedData || [], sourceName: source.name, failed: true };
+        return { items: cachedData || [], sourceName: source.name, failed: !cachedData || cachedData.length === 0 };
       }
     }
 
@@ -176,20 +176,18 @@ export async function GET(request: NextRequest) {
       return { items: cachedData, sourceName: source.name, failed: false };
     }
 
-    // 2. STALE HIT
+    // 2. STALE HIT (Instant return + background revalidation)
     if (cachedData && isStale) {
-      if (!isSocial) {
-        after(async () => {
-          await revalidate().catch(console.error);
-        });
-      }
+      after(async () => {
+        await revalidateSource().catch(console.error);
+      });
       return { items: cachedData, sourceName: source.name, failed: false };
     }
 
     // 3. CACHE MISS
     try {
-      const freshItems = await revalidate();
-      return { items: freshItems || [], sourceName: source.name, failed: freshItems?.length === 0 };
+      const freshItems = await revalidateSource();
+      return { items: freshItems || [], sourceName: source.name, failed: false };
     } catch (err: any) {
       console.warn(`[Live Fetch] ${source.name}:`, err.message);
       return { items: [], sourceName: source.name, failed: true };

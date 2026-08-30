@@ -65,7 +65,7 @@ export class RSSAdapter implements FeedAdapter {
       const xmlText = await response.text();
       const parsed = await this.parser.parseString(xmlText);
 
-      return (parsed.items || []).map((item, index) => {
+      return (parsed.items || []).slice(0, 30).map((item, index) => {
         const enclosure = (item as any).enclosure as Record<string, any> | undefined;
         const enclosureUrl =
           (enclosure && typeof enclosure === 'object' && typeof enclosure.url === 'string' && enclosure.url.trim())
