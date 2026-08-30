@@ -15,9 +15,35 @@ export class RSSAdapter implements FeedAdapter {
           ['enclosure', 'enclosure'],
           ['dc:creator', 'creator'],
           ['content:encoded', 'contentEncoded'],
+          ['itunes:image', 'itunesImage'],
+          ['itunes:duration', 'itunesDuration'],
         ],
       },
     });
+  }
+
+  private parseDurationSeconds(value: unknown): number | undefined {
+    if (value === null || value === undefined) return undefined;
+
+    const str = String(value).trim();
+    if (!str) return undefined;
+
+    const asSeconds = Number(str);
+    if (Number.isFinite(asSeconds)) {
+      return Math.max(0, Math.round(asSeconds));
+    }
+
+    const parts = str.split(':').map((segment) => Number(segment));
+    if (!parts.length || parts.some((part) => !Number.isFinite(part))) {
+      return undefined;
+    }
+
+    let totalSeconds = 0;
+    for (let i = 0; i < parts.length; i += 1) {
+      totalSeconds += parts[parts.length - 1 - i] * 60 ** i;
+    }
+
+    return Math.max(0, totalSeconds);
   }
 
   async fetchFeed(source: FeedSource): Promise<FeedItem[]> {
@@ -38,11 +64,30 @@ export class RSSAdapter implements FeedAdapter {
       const parsed = await this.parser.parseString(xmlText);
 
       return (parsed.items || []).map((item, index) => {
-        // Extract best image
+        const enclosure = (item as any).enclosure as Record<string, any> | undefined;
+        const enclosureUrl =
+          (enclosure && typeof enclosure === 'object' && typeof enclosure.url === 'string' && enclosure.url.trim())
+            ? enclosure.url
+            : Array.isArray((item as any).enclosure)
+              ? ((item as any).enclosure[0]?.url || '')
+              : '';
+
+        const itunesImageUrl =
+          ((item as any).itunesImage && typeof (item as any).itunesImage === 'object')
+            ? ((item as any).itunesImage.$?.href || (item as any).itunesImage.href || (item as any).itunesImage.url || '')
+            : '';
+
+        // Extract best image. Enclosure URLs are audio files, not artwork.
         let thumbnailUrl =
+          itunesImageUrl ||
+          parsed.image?.url ||
           (item as any).mediaThumbnail?.$?.url ||
           (item as any).mediaContent?.$?.url ||
-          (item as any).enclosure?.url;
+          (item as any).mediaThumbnail?.url ||
+          (item as any).mediaContent?.url ||
+          (item as any).image?.url ||
+          (item as any).image?.$.url ||
+          '';
 
         // Try extracting first img src from content if no media tag
         if (!thumbnailUrl && (item.content || (item as any).contentEncoded)) {
@@ -67,14 +112,20 @@ export class RSSAdapter implements FeedAdapter {
         const rawSummary = item.contentSnippet || item.summary || item.content || '';
         const cleanSummary = rawSummary.replace(/<[^>]*>?/gm, '').slice(0, 240);
 
-        // Estimate reading time
+        // Estimate reading time for non-podcast items
         const wordCount = (item.content || (item as any).contentEncoded || cleanSummary).split(/\s+/).length;
         const readTimeMinutes = Math.max(1, Math.ceil(wordCount / 200));
+
+        const podcastAudioUrl =
+          enclosureUrl && /audio|mpeg|mp3|wav|ogg|aac/i.test(String((enclosure && enclosure.type) || ''))
+            ? enclosureUrl
+            : undefined;
+        const durationSeconds = podcastAudioUrl ? this.parseDurationSeconds((item as any).itunesDuration) : undefined;
 
         return {
           id: `${source.id}-${item.guid || item.link || index}`,
           platform: source.platform,
-          mediaType: 'article',
+          mediaType: podcastAudioUrl ? 'podcast' : 'article',
           title: item.title?.trim() || 'Untitled Article',
           url: item.link || source.url,
           author: {
@@ -85,12 +136,14 @@ export class RSSAdapter implements FeedAdapter {
           thumbnailUrl,
           summary: cleanSummary ? `${cleanSummary}...` : undefined,
           content: (item as any).contentEncoded || item.content || cleanSummary,
-          metrics: {
+          metrics: podcastAudioUrl ? undefined : {
             readTime: `${readTimeMinutes} min read`,
           },
           tags: [source.category, source.name],
           sourceName: source.name,
           sourceId: source.id,
+          audioUrl: podcastAudioUrl,
+          durationSeconds,
           isCustom: source.isCustom,
         };
       });

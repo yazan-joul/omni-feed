@@ -12,6 +12,7 @@ import {
   Share2,
   Check,
   BookOpen,
+  Headphones,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { FeedItem } from '@/lib/types';
@@ -24,6 +25,7 @@ interface FeedCardProps {
   onToggleBookmark: (item: FeedItem) => void;
   onOpenVideo: (item: FeedItem) => void;
   onOpenReader: (item: FeedItem) => void;
+  onOpenPodcast: (item: FeedItem) => void;
 }
 
 export function FeedCard({
@@ -34,8 +36,14 @@ export function FeedCard({
   onToggleBookmark,
   onOpenVideo,
   onOpenReader,
+  onOpenPodcast,
 }: FeedCardProps) {
   const [copied, setCopied] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
+
+  React.useEffect(() => {
+    setImageFailed(false);
+  }, [item.id, item.thumbnailUrl]);
 
   const formattedDate = (() => {
     try {
@@ -48,9 +56,15 @@ export function FeedCard({
   const handleCardClick = () => {
     if (item.mediaType === 'video' && item.videoId) {
       onOpenVideo(item);
-    } else {
-      onOpenReader(item);
+      return;
     }
+
+    if (item.mediaType === 'podcast') {
+      onOpenPodcast(item);
+      return;
+    }
+
+    onOpenReader(item);
   };
 
   const handleShare = (e: React.MouseEvent) => {
@@ -66,6 +80,23 @@ export function FeedCard({
   };
 
   const isVideo = item.mediaType === 'video';
+  const isPodcast = item.mediaType === 'podcast';
+  const shouldUsePodcastFallback = isPodcast && (!item.thumbnailUrl || imageFailed);
+  const shouldRenderThumbnail = Boolean(item.thumbnailUrl) && !imageFailed;
+  const formattedDuration =
+    item.durationSeconds !== undefined && item.durationSeconds !== null
+      ? (() => {
+          const hours = Math.floor(item.durationSeconds / 3600);
+          const minutes = Math.floor((item.durationSeconds % 3600) / 60);
+          const seconds = item.durationSeconds % 60;
+
+          if (hours > 0) {
+            return [hours, minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':');
+          }
+
+          return `${minutes}:${String(seconds).padStart(2, '0')}`;
+        })()
+      : undefined;
 
   if (viewMode === 'list') {
     return (
@@ -77,18 +108,43 @@ export function FeedCard({
       >
         {/* Left: Thumbnail & Title */}
         <div className="flex items-center gap-4 flex-1 min-w-0">
-          {item.thumbnailUrl && (
-            <div className="relative w-28 h-20 sm:w-36 sm:h-24 rounded-xl overflow-hidden flex-shrink-0 bg-slate-900">
-              <img
-                src={item.thumbnailUrl}
-                alt={item.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                loading="lazy"
-              />
+          {(item.thumbnailUrl || isPodcast) && (
+            <div className="relative w-28 h-20 sm:w-36 sm:h-24 rounded-xl overflow-hidden flex-shrink-0 bg-slate-900 border border-white/5">
+              {shouldRenderThumbnail ? (
+                <>
+                  <img
+                    src={item.thumbnailUrl}
+                    alt={item.title}
+                    onError={() => setImageFailed(true)}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-transparent to-black/10" />
+                </>
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 via-slate-900 to-violet-500/10" />
+              )}
+
               {isVideo && (
                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/20 transition-all">
                   <div className="w-8 h-8 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-lg">
                     <Play className="w-4 h-4 fill-white ml-0.5" />
+                  </div>
+                </div>
+              )}
+
+              {isPodcast && !isVideo && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-emerald-600/90 text-white flex items-center justify-center shadow-lg shadow-emerald-600/20">
+                    <Play className="w-4 h-4 fill-white ml-0.5" />
+                  </div>
+                </div>
+              )}
+
+              {shouldUsePodcastFallback && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-600/10 text-emerald-300 backdrop-blur-sm">
+                    <Headphones className="w-5 h-5" />
                   </div>
                 </div>
               )}
@@ -102,17 +158,31 @@ export function FeedCard({
                 className={`flex items-center gap-1 font-semibold px-2 py-0.5 rounded-md ${
                   isVideo
                     ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                    : 'bg-violet-500/10 text-violet-400 border border-violet-500/20'
+                    : isPodcast
+                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                      : 'bg-violet-500/10 text-violet-400 border border-violet-500/20'
                 }`}
               >
-                {isVideo ? <Youtube className="w-3 h-3 text-red-500" /> : <Rss className="w-3 h-3 text-violet-400" />}
-                {item.sourceName}
+                {isVideo ? (
+                  <Youtube className="w-3 h-3 text-red-500" />
+                ) : isPodcast ? (
+                  <Headphones className="w-3 h-3 text-emerald-400" />
+                ) : (
+                  <Rss className="w-3 h-3 text-violet-400" />
+                )}
+                {isPodcast ? 'Podcast' : item.sourceName}
               </span>
+              {isPodcast && (
+                <span className="text-slate-400 truncate max-w-[8rem]">{item.sourceName}</span>
+              )}
               <span className="text-slate-400 flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 {formattedDate}
               </span>
-              {item.metrics?.readTime && (
+              {isPodcast && formattedDuration && (
+                <span className="text-slate-400 hidden sm:inline">{formattedDuration}</span>
+              )}
+              {!isPodcast && item.metrics?.readTime && (
                 <span className="text-slate-400 hidden sm:inline">{item.metrics.readTime}</span>
               )}
             </div>
@@ -175,23 +245,44 @@ export function FeedCard({
       }`}
     >
       {/* Media Image Header */}
-      {item.thumbnailUrl && (
+      {(item.thumbnailUrl || isPodcast) && (
         <div className="relative aspect-video w-full overflow-hidden bg-slate-950">
-          <img
-            src={item.thumbnailUrl}
-            alt={item.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            loading="lazy"
-          />
+          {shouldRenderThumbnail ? (
+            <>
+              <img
+                src={item.thumbnailUrl}
+                alt={item.title}
+                onError={() => setImageFailed(true)}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 media-overlay pointer-events-none" />
+            </>
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 via-slate-950 to-violet-500/10" />
+          )}
 
-          {/* Media overlay gradient */}
-          <div className="absolute inset-0 media-overlay pointer-events-none" />
-
-          {/* Video Play Button Overlay */}
+          {/* Video / Podcast Play Button Overlay */}
           {isVideo && (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-12 h-12 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:bg-red-500 transition-all duration-300">
                 <Play className="w-5 h-5 fill-white ml-0.5" />
+              </div>
+            </div>
+          )}
+
+          {isPodcast && !isVideo && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-emerald-600/90 text-white flex items-center justify-center shadow-lg shadow-emerald-600/20 group-hover:scale-110 transition-all duration-300">
+                <Play className="w-5 h-5 fill-white ml-0.5" />
+              </div>
+            </div>
+          )}
+
+          {shouldUsePodcastFallback && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-600/10 text-emerald-300 shadow-lg shadow-emerald-900/20 backdrop-blur-sm">
+                <Headphones className="w-7 h-7" />
               </div>
             </div>
           )}
@@ -202,11 +293,19 @@ export function FeedCard({
               className={`flex items-center gap-1 font-semibold px-2.5 py-1 rounded-lg text-xs backdrop-blur-md ${
                 isVideo
                   ? 'bg-red-600/90 text-white shadow-md shadow-red-600/30'
-                  : 'bg-violet-600/90 text-white shadow-md shadow-violet-600/30'
+                  : isPodcast
+                    ? 'bg-emerald-600/90 text-white shadow-md shadow-emerald-600/30'
+                    : 'bg-violet-600/90 text-white shadow-md shadow-violet-600/30'
               }`}
             >
-              {isVideo ? <Youtube className="w-3.5 h-3.5" /> : <BookOpen className="w-3.5 h-3.5" />}
-              {isVideo ? 'Video' : 'Article'}
+              {isVideo ? (
+                <Youtube className="w-3.5 h-3.5" />
+              ) : isPodcast ? (
+                <Headphones className="w-3.5 h-3.5" />
+              ) : (
+                <BookOpen className="w-3.5 h-3.5" />
+              )}
+              {isVideo ? 'Video' : isPodcast ? 'Podcast' : 'Article'}
             </span>
           </div>
 
@@ -222,7 +321,12 @@ export function FeedCard({
                 {item.metrics.views} views
               </span>
             )}
-            {item.metrics?.readTime && (
+            {isPodcast && formattedDuration && (
+              <span className="bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-md">
+                {formattedDuration}
+              </span>
+            )}
+            {!isPodcast && item.metrics?.readTime && (
               <span className="bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-md">
                 {item.metrics.readTime}
               </span>
@@ -279,7 +383,7 @@ export function FeedCard({
             onClick={handleCardClick}
             className="text-xs font-semibold text-violet-400 hover:text-violet-300 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform"
           >
-            {isVideo ? 'Watch Video' : 'Read Article'} &rarr;
+            {isVideo ? 'Watch Video' : isPodcast ? 'Listen Podcast' : 'Read Article'} &rarr;
           </button>
 
           <div className="flex items-center gap-1.5">

@@ -9,6 +9,7 @@ import {
   List,
   Video,
   FileText,
+  Headphones,
   Youtube,
   Rss,
   Terminal,
@@ -61,16 +62,16 @@ export function FilterBar({
   }, []);
 
   return (
-    <div className="w-full space-y-4 mb-6">
+    <div className="w-full space-y-3 sm:space-y-4 mb-6 overflow-x-hidden">
       {/* Top row: Search Bar, Media Switcher, View Switcher & Refresh */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         {/* Search input */}
-        <div className="relative flex-1">
+        <div className="relative w-full md:flex-1 min-w-0">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             ref={searchInputRef}
             type="text"
-            placeholder="Search across videos, articles, tags, authors... (Press '/' to focus)"
+            placeholder="Search across videos, podcasts, articles, tags, authors... (Press '/' to focus)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-900/60 border border-white/10 text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 transition-all"
@@ -86,39 +87,50 @@ export function FilterBar({
         </div>
 
         {/* Media Type & View Mode Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center gap-2 md:w-auto">
           {/* Media Type Filter */}
-          <div className="flex items-center p-1 rounded-xl bg-slate-900/60 border border-white/10 text-xs">
-            <button
-              onClick={() => setSelectedMediaType('all')}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
-                selectedMediaType === 'all' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              All Types
-            </button>
-            <button
-              onClick={() => setSelectedMediaType('video')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all ${
-                selectedMediaType === 'video' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Video className="w-3.5 h-3.5" />
-              Videos
-            </button>
-            <button
-              onClick={() => setSelectedMediaType('article')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all ${
-                selectedMediaType === 'article' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <FileText className="w-3.5 h-3.5" />
-              Articles
-            </button>
+          <div className="min-w-0 flex-1 overflow-x-auto scrollbar-none rounded-xl border border-white/10 bg-slate-900/60 p-1 text-xs md:flex-none">
+            <div className="flex min-w-max items-center gap-1">
+              <button
+                onClick={() => setSelectedMediaType('all')}
+                className={`px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap ${
+                  selectedMediaType === 'all' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                All Types
+              </button>
+              <button
+                onClick={() => setSelectedMediaType('video')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap ${
+                  selectedMediaType === 'video' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Video className="w-3.5 h-3.5" />
+                Videos
+              </button>
+              <button
+                onClick={() => setSelectedMediaType('podcast')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap ${
+                  selectedMediaType === 'podcast' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Headphones className="w-3.5 h-3.5" />
+                Podcasts
+              </button>
+              <button
+                onClick={() => setSelectedMediaType('article')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap ${
+                  selectedMediaType === 'article' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                Articles
+              </button>
+            </div>
           </div>
 
           {/* View Mode Grid/List */}
-          <div className="flex items-center p-1 rounded-xl bg-slate-900/60 border border-white/10">
+          <div className="flex shrink-0 items-center rounded-xl border border-white/10 bg-slate-900/60 p-1">
             <button
               onClick={() => setViewMode('grid')}
               title="Grid View"
@@ -144,7 +156,7 @@ export function FilterBar({
             onClick={onRefresh}
             disabled={isLoading}
             title="Refresh Feed"
-            className="p-2.5 rounded-xl bg-slate-900/60 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white transition-all disabled:opacity-50"
+            className="shrink-0 p-2.5 rounded-xl bg-slate-900/60 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white transition-all disabled:opacity-50"
           >
             <RotateCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-violet-400' : ''}`} />
           </button>
@@ -154,7 +166,7 @@ export function FilterBar({
       {/* Bottom row: Category & Platform Pills */}
       <div className="flex items-center justify-between gap-4 overflow-x-auto pb-1 scrollbar-none">
         {/* Categories */}
-        <div className="flex items-center gap-1.5 flex-nowrap">
+        <div className="flex min-w-max items-center gap-1.5">
           {CATEGORIES.map((cat) => (
             <button
               key={cat}
@@ -171,7 +183,7 @@ export function FilterBar({
         </div>
 
         {/* Platform Filter */}
-        <div className="flex items-center gap-1 flex-nowrap">
+        <div className="flex min-w-max items-center gap-1">
           <button
             onClick={() => setSelectedPlatform('all')}
             className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${

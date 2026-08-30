@@ -14,6 +14,7 @@ interface FeedGridProps {
   onToggleBookmark: (item: FeedItem) => void;
   onOpenVideo: (item: FeedItem) => void;
   onOpenReader: (item: FeedItem) => void;
+  onOpenPodcast: (item: FeedItem) => void;
   onResetFilters?: () => void;
   onOpenAddModal?: () => void;
 }
@@ -27,6 +28,7 @@ export function FeedGrid({
   onToggleBookmark,
   onOpenVideo,
   onOpenReader,
+  onOpenPodcast,
   onResetFilters,
   onOpenAddModal,
 }: FeedGridProps) {
@@ -110,6 +112,7 @@ export function FeedGrid({
           onToggleBookmark={onToggleBookmark}
           onOpenVideo={onOpenVideo}
           onOpenReader={onOpenReader}
+          onOpenPodcast={onOpenPodcast}
         />
       ))}
     </div>

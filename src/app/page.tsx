@@ -6,6 +6,7 @@ import { FilterBar } from '@/components/FilterBar';
 import { FeedGrid } from '@/components/FeedGrid';
 import { VideoPlayerModal } from '@/components/VideoPlayerModal';
 import { ReaderDrawer } from '@/components/ReaderDrawer';
+import { BottomAudioPlayer } from '@/components/BottomAudioPlayer';
 import { AddFeedModal } from '@/components/AddFeedModal';
 import { SourcesModal } from '@/components/SourcesModal';
 import { useBookmarks } from '@/lib/hooks/useBookmarks';
@@ -27,6 +28,7 @@ export default function HomePage() {
   // State: Modals & Drawers
   const [activeVideoItem, setActiveVideoItem] = useState<FeedItem | null>(null);
   const [activeReaderItem, setActiveReaderItem] = useState<FeedItem | null>(null);
+  const [activePodcastItem, setActivePodcastItem] = useState<FeedItem | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSourcesModalOpen, setIsSourcesModalOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -72,22 +74,45 @@ export default function HomePage() {
       if (selectedMediaType && selectedMediaType !== 'all') params.set('mediaType', selectedMediaType);
       if (searchQuery) params.set('search', searchQuery);
 
-      // Pass enabled custom sources
       if (customOnly.length > 0) {
         params.set('customSources', JSON.stringify(customOnly));
       }
 
       const res = await fetch(`/api/feed?${params.toString()}`);
-      const data = await res.json();
+
+      if (!res.ok) {
+        const text = await res.text();
+        const serverMessage = text ? text.slice(0, 160).replace(/\s+/g, ' ').trim() : 'Unknown error';
+        throw new Error(`Feed request failed (${res.status}): ${serverMessage}`);
+      }
+
+      const responseText = await res.text();
+      if (!responseText.trim()) {
+        throw new Error('Empty response from feed API.');
+      }
+
+      let data: any;
+      const maybeJson = responseText.trim();
+      if (maybeJson.startsWith('{') || maybeJson.startsWith('[')) {
+        try {
+          data = JSON.parse(maybeJson);
+        } catch {
+          throw new Error('Feed API response was not valid JSON.');
+        }
+      } else {
+        throw new Error(`Feed API returned non-JSON content: ${maybeJson.slice(0, 80)}`);
+      }
 
       if (data.success && Array.isArray(data.items)) {
         setFeedItems(data.items);
       } else {
         setError('Unable to load feed streams.');
+        setFeedItems([]);
       }
     } catch (err: any) {
       console.error('Fetch error:', err);
-      setError('Connection interrupted. Serving cached items.');
+      setError(err?.message ? `Connection interrupted: ${err.message}` : 'Connection interrupted. Serving cached items.');
+      setFeedItems((current) => (current.length > 0 ? current : []));
     } finally {
       setIsLoading(false);
     }
@@ -107,6 +132,14 @@ export default function HomePage() {
   const handleOpenReader = (item: FeedItem) => {
     markAsRead(item.id);
     setActiveReaderItem(item);
+    setActivePodcastItem(null);
+  };
+
+  const handleOpenPodcast = (item: FeedItem) => {
+    markAsRead(item.id);
+    setActiveVideoItem(null);
+    setActiveReaderItem(null);
+    setActivePodcastItem(item);
   };
 
   // Filter Bookmarks
@@ -126,6 +159,7 @@ export default function HomePage() {
   });
 
   const displayedItems = activeTab === 'feed' ? feedItems : filteredBookmarks;
+  const hasActivePodcastPlayer = Boolean(activePodcastItem);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0b0f19] text-slate-100 selection:bg-violet-600 selection:text-white">
@@ -142,7 +176,7 @@ export default function HomePage() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6 sm:py-8 space-y-6">
+      <main className={`flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6 sm:py-8 space-y-6 ${hasActivePodcastPlayer ? 'pb-36 md:pb-32' : ''}`}>
         {/* Hero Banner / Feed Title */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-white/5">
           <div>
@@ -197,6 +231,12 @@ export default function HomePage() {
           onRefresh={fetchFeed}
         />
 
+        {error && (
+          <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+            {error}
+          </div>
+        )}
+
         {/* Feed Cards Grid / List View */}
         <FeedGrid
           items={displayedItems}
@@ -207,6 +247,7 @@ export default function HomePage() {
           onToggleBookmark={toggleBookmark}
           onOpenVideo={handleOpenVideo}
           onOpenReader={handleOpenReader}
+          onOpenPodcast={handleOpenPodcast}
           onResetFilters={() => {
             setSearchQuery('');
             setSelectedCategory('All');
@@ -233,6 +274,12 @@ export default function HomePage() {
         onClose={() => setActiveReaderItem(null)}
         isBookmarked={activeReaderItem ? isBookmarked(activeReaderItem.id) : false}
         onToggleBookmark={toggleBookmark}
+      />
+
+      <BottomAudioPlayer
+        item={activePodcastItem}
+        isOpen={Boolean(activePodcastItem)}
+        onClose={() => setActivePodcastItem(null)}
       />
 
       {/* Add Custom Feed Modal */}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { FeedSource } from '../types';
 import { DEFAULT_FEED_SOURCES } from '../config/default-sources';
 
@@ -44,7 +44,7 @@ export function useCustomSources() {
     saveSources(DEFAULT_FEED_SOURCES);
   };
 
-  const customOnly = sources.filter((s) => s.isCustom);
+  const customOnly = useMemo(() => sources.filter((s) => s.isCustom), [sources]);
 
   return {
     sources,
