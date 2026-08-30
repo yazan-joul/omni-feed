@@ -54,12 +54,37 @@ export class TwitterAdapter implements FeedAdapter {
       }
 
       return data.slice(0, 6).map((post: any, index: number): FeedItem => {
-        const rawText = post.postText || post.text || post.fullText || '';
-        const cleanText = rawText.replace(/\n+/g, ' ').trim();
+        const rawText =
+          post.postText ||
+          post.text ||
+          post.fullText ||
+          post.full_text ||
+          post.tweet_text ||
+          post.content ||
+          post.description ||
+          post.caption ||
+          post.tweet?.text ||
+          post.tweet?.full_text ||
+          post.legacy?.full_text ||
+          post.note_tweet?.note_tweet_results?.result?.text ||
+          '';
+        const cleanText = rawText.replace(/\r\n|\r|\n+/g, ' ').trim();
 
-        const firstLine = cleanText.split(/[.!?\n]/)[0]?.trim() || '';
+        // Extract a clean headline: take the first sentence or up to 120 chars on word boundaries
+        let title = '';
+        if (cleanText) {
+          if (cleanText.length <= 110) {
+            title = cleanText;
+          } else {
+            const truncated = cleanText.slice(0, 110);
+            const lastSpace = truncated.lastIndexOf(' ');
+            title = (lastSpace > 40 ? truncated.slice(0, lastSpace) : truncated) + '...';
+          }
+        }
         const authorHandle = post.author?.screenName || post.author?.userName || source.name.replace(/^@/, '');
-        const title = firstLine.length > 5 ? firstLine.slice(0, 95) : `Tweet by @${authorHandle}`;
+        if (!title) {
+          title = `Update from @${authorHandle}`;
+        }
 
         const isVideo = Boolean(
           post.media?.some((m: any) => m.type === 'video' || m.type === 'animated_gif') ||

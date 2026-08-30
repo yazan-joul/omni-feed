@@ -47,10 +47,22 @@ export class InstagramAdapter implements FeedAdapter {
           const authorAvatar = profile.profilePicUrlHD || profile.profilePicUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}&background=e1306c&color=fff`;
 
           return profile.latestPosts.slice(0, 6).map((post: any, index: number): FeedItem => {
-            const rawCaption = post.caption || post.text || '';
-            const cleanCaption = rawCaption.replace(/\n+/g, ' ').trim();
-            const firstLine = cleanCaption.split(/[.!?\n]/)[0]?.trim() || '';
-            const title = firstLine.length > 5 ? firstLine.slice(0, 95) : `Post by @${username}`;
+            const rawCaption = post.caption || post.text || post.captionText || '';
+            const cleanCaption = rawCaption.replace(/\r\n|\r|\n+/g, ' ').trim();
+
+            let title = '';
+            if (cleanCaption) {
+              if (cleanCaption.length <= 110) {
+                title = cleanCaption;
+              } else {
+                const truncated = cleanCaption.slice(0, 110);
+                const lastSpace = truncated.lastIndexOf(' ');
+                title = (lastSpace > 40 ? truncated.slice(0, lastSpace) : truncated) + '...';
+              }
+            }
+            if (!title) {
+              title = `Post by @${username}`;
+            }
 
             const isVideo = post.type === 'Video' || Boolean(post.videoUrl) || Boolean(post.videoViewCount);
             const thumbnailUrl = post.displayUrl || post.thumbnailUrl || (Array.isArray(post.images) && post.images[0]) || undefined;

@@ -202,12 +202,18 @@ export function ReaderDrawer({
           {/* Article Content / Excerpt */}
           <div className={`text-slate-300 space-y-4 ${fontSizeClasses}`}>
             {item.content ? (
-              <div
-                className="prose prose-invert max-w-none space-y-4"
-                dangerouslySetInnerHTML={{ __html: item.content }}
-              />
+              item.content.includes('<') ? (
+                <div
+                  className="prose prose-invert max-w-none space-y-4"
+                  dangerouslySetInnerHTML={{ __html: item.content }}
+                />
+              ) : (
+                <div className="text-slate-200 whitespace-pre-line leading-relaxed">
+                  {item.content}
+                </div>
+              )
             ) : item.summary ? (
-              <p>{item.summary}</p>
+              <p className="whitespace-pre-line leading-relaxed text-slate-200">{item.summary}</p>
             ) : (
               <p className="italic text-slate-400">
                 Full article body is protected or preview only. Click below to view on the original website.
