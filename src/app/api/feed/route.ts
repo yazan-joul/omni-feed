@@ -146,11 +146,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // BMAD Strategy: Lazy Loading Social Feeds
-    // If not viewing a specific platform, don't proactively revalidate social feeds in the background.
-    // Only revalidate if they click the specific platform filter, or if they click the refresh button.
-    const shouldLazyLoad = isSocial && !isSpecificPlatform;
-
     // 1. FRESH HIT
     if (cachedData && !isStale) {
       return { items: cachedData, sourceName: source.name, failed: false };
@@ -158,20 +153,13 @@ export async function GET(request: NextRequest) {
 
     // 2. STALE HIT
     if (cachedData && isStale) {
-      if (!shouldLazyLoad) {
-        after(async () => {
-          await revalidate().catch(console.error);
-        });
-      }
+      after(async () => {
+        await revalidate().catch(console.error);
+      });
       return { items: cachedData, sourceName: source.name, failed: false };
     }
 
     // 3. CACHE MISS
-    if (shouldLazyLoad) {
-      // If no cache exists and we are lazy loading, don't block and burn credits on the "All" view.
-      return { items: [], sourceName: source.name, failed: false };
-    }
-
     try {
       const timeoutMs = isSocial ? 35000 : 7500;
       const freshItems = await fetchWithTimeout(revalidate(), timeoutMs, source.name);
