@@ -38,6 +38,7 @@ export default function HomePage() {
   // Feed Data & Loading
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [failedSources, setFailedSources] = useState<string[]>([]);
 
@@ -77,6 +78,31 @@ export default function HomePage() {
   };
 
   const fetchAbortController = useRef<AbortController | null>(null);
+
+
+  // Sync Feeds (Background Ingestion)
+  const handleSyncFeeds = async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    try {
+      // Trigger background ingestion layer
+      const res = await fetch('/api/cron/ingest', { method: 'POST' });
+      const data = await res.json();
+      
+      if (data.success) {
+        // Refetch local DB to show fresh items
+        await fetchFeed();
+      } else {
+        console.error('Ingestion failed:', data.error);
+        alert('Failed to sync feeds. Check console.');
+      }
+    } catch (error) {
+      console.error('Network error during sync:', error);
+      alert('Network error during sync.');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // Fetch Aggregated Feed Data (Only runs on mount, source changes, or manual refresh)
   const fetchFeed = useCallback(async () => {
@@ -283,6 +309,8 @@ export default function HomePage() {
         onOpenSourcesModal={() => setIsSourcesModalOpen(true)}
         isDarkMode={isDarkMode}
         onToggleTheme={handleToggleTheme}
+        onSyncFeeds={handleSyncFeeds}
+        isSyncing={isSyncing}
       />
 
       {/* Main Content Area */}
