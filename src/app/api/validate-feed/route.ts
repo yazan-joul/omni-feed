@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        platform: 'brightdata',
+        platform: 'instagram',
         title: `@${handle} (Instagram)`,
         description: `Instagram social stream for @${handle}`,
         url: normalizedUrl,

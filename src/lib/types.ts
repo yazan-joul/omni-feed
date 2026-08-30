@@ -5,6 +5,7 @@ export type ContentPlatform =
   | 'hackernews'
   | 'reddit'
   | 'twitter'
+  | 'instagram'
   | 'linkedin'
   | 'brightdata'
   | 'custom';

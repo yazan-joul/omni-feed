@@ -14,6 +14,7 @@ import {
   BookOpen,
   CheckCircle2,
   Headphones,
+  Instagram,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { FeedItem } from '@/lib/types';
@@ -164,21 +165,25 @@ export function FeedCard({
             <div className="flex items-center gap-2 text-xs">
               <span
                 className={`flex items-center gap-1 font-semibold px-2 py-0.5 rounded-md ${
-                  isVideo
+                  item.platform === 'instagram'
+                    ? 'bg-pink-500/10 text-pink-400 border border-pink-500/20'
+                    : isVideo
                     ? 'bg-red-500/10 text-red-400 border border-red-500/20'
                     : isPodcast
                     ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                     : 'bg-violet-500/10 text-violet-400 border border-violet-500/20'
                 }`}
               >
-                {isVideo ? (
+                {item.platform === 'instagram' ? (
+                  <Instagram className="w-3 h-3 text-pink-400" />
+                ) : isVideo ? (
                   <Youtube className="w-3 h-3 text-red-500" />
                 ) : isPodcast ? (
                   <Headphones className="w-3 h-3 text-emerald-400" />
                 ) : (
                   <Rss className="w-3 h-3 text-violet-400" />
                 )}
-                {isPodcast ? 'Podcast' : item.sourceName}
+                {item.platform === 'instagram' ? 'Instagram' : isPodcast ? 'Podcast' : item.sourceName}
               </span>
               {isPodcast && (
                 <span className="text-slate-400 truncate max-w-[8rem]">{item.sourceName}</span>
@@ -314,21 +319,25 @@ export function FeedCard({
           <div className="absolute top-3 left-3 flex items-center gap-2">
             <span
               className={`flex items-center gap-1 font-semibold px-2.5 py-1 rounded-lg text-xs backdrop-blur-md ${
-                isVideo
+                item.platform === 'instagram'
+                  ? 'bg-pink-600/90 text-white shadow-md shadow-pink-600/30'
+                  : isVideo
                   ? 'bg-red-600/90 text-white shadow-md shadow-red-600/30'
                   : isPodcast
                   ? 'bg-emerald-600/90 text-white shadow-md shadow-emerald-600/30'
                   : 'bg-violet-600/90 text-white shadow-md shadow-violet-600/30'
               }`}
             >
-              {isVideo ? (
+              {item.platform === 'instagram' ? (
+                <Instagram className="w-3.5 h-3.5" />
+              ) : isVideo ? (
                 <Youtube className="w-3.5 h-3.5" />
               ) : isPodcast ? (
                 <Headphones className="w-3.5 h-3.5" />
               ) : (
                 <BookOpen className="w-3.5 h-3.5" />
               )}
-              {isVideo ? 'Video' : isPodcast ? 'Podcast' : 'Article'}
+              {item.platform === 'instagram' ? 'Instagram' : isVideo ? 'Video' : isPodcast ? 'Podcast' : 'Article'}
             </span>
           </div>
 
@@ -408,7 +417,7 @@ export function FeedCard({
             onClick={handleCardClick}
             className="text-xs font-semibold text-violet-400 hover:text-violet-300 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform"
           >
-            {isVideo ? 'Watch Video' : isPodcast ? 'Listen Podcast' : 'Read Article'} &rarr;
+            {item.platform === 'instagram' ? 'View Post' : isVideo ? 'Watch Video' : isPodcast ? 'Listen Podcast' : 'Read Article'} &rarr;
           </button>
 
           <div className="flex items-center gap-1.5">

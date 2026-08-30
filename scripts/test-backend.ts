@@ -241,7 +241,7 @@ setTimeout(async () => {
       if (rawInput.includes('instagram.com')) {
         const match = rawInput.match(/instagram\.com\/([a-zA-Z0-9_.]+)/i);
         const handle = match ? match[1] : 'profile';
-        return { valid: true, platform: 'brightdata', title: `@${handle} (Instagram)` };
+        return { valid: true, platform: 'instagram', title: `@${handle} (Instagram)` };
       }
       if (rawInput.startsWith('@') || rawInput.includes('x.com/')) {
         const handle = rawInput.startsWith('@') ? rawInput.slice(1) : rawInput.split('x.com/')[1];
@@ -255,7 +255,7 @@ setTimeout(async () => {
     assert.strictEqual(redditRes.title, 'r/technology');
 
     const igRes = await testValidate('https://www.instagram.com/natgeo/');
-    assert.strictEqual(igRes.platform, 'brightdata');
+    assert.strictEqual(igRes.platform, 'instagram');
     assert.strictEqual(igRes.title, '@natgeo (Instagram)');
 
     const xRes = await testValidate('@realDonaldTrump');

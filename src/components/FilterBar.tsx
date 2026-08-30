@@ -13,6 +13,7 @@ import {
   Youtube,
   Rss,
   Terminal,
+  Instagram,
   Clock,
   Layers,
   CheckCheck,
@@ -333,6 +334,22 @@ export function FilterBar({
           >
             <Rss className="w-3.5 h-3.5 text-blue-400" />
             RSS
+          </button>
+          <button
+            onClick={() => {
+              setSelectedPlatform('instagram');
+              if (selectedMediaType === 'podcast') {
+                setSelectedMediaType('all');
+              }
+            }}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+              selectedPlatform === 'instagram'
+                ? 'bg-pink-600/80 text-white'
+                : 'text-slate-400 hover:text-pink-400'
+            }`}
+          >
+            <Instagram className="w-3.5 h-3.5 text-pink-400" />
+            Instagram
           </button>
         </div>
       </div>

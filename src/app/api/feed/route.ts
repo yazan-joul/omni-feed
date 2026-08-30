@@ -3,6 +3,7 @@ import { DEFAULT_FEED_SOURCES } from '@/lib/config/default-sources';
 import { RSSAdapter } from '@/lib/adapters/rss.adapter';
 import { YouTubeAdapter } from '@/lib/adapters/youtube.adapter';
 import { BrightDataAdapter } from '@/lib/adapters/brightdata.adapter';
+import { InstagramAdapter } from '@/lib/adapters/instagram.adapter';
 import { FALLBACK_FEED_ITEMS } from '@/lib/mock-data';
 import { feedCache } from '@/lib/utils/cache';
 import { FeedItem, FeedSource } from '@/lib/types';
@@ -11,6 +12,7 @@ import { after } from 'next/server';
 const rssAdapter = new RSSAdapter();
 const ytAdapter = new YouTubeAdapter();
 const brightDataAdapter = new BrightDataAdapter();
+const instagramAdapter = new InstagramAdapter();
 
 // Next.js Route Cache TTL config
 export const revalidate = 300;
@@ -88,10 +90,13 @@ export async function GET(request: NextRequest) {
     const revalidate = async (): Promise<FeedItem[]> => {
       try {
         let items: FeedItem[] = [];
-        const isSocial = ['brightdata', 'twitter', 'reddit', 'linkedin'].includes(source.platform);
+        const isInstagram = source.platform === 'instagram';
+        const isSocial = isInstagram || ['brightdata', 'twitter', 'reddit', 'linkedin'].includes(source.platform);
 
         if (source.platform === 'youtube') {
           items = await ytAdapter.fetchFeed(source);
+        } else if (isInstagram) {
+          items = await instagramAdapter.fetchFeed(source);
         } else if (isSocial) {
           items = await brightDataAdapter.fetchFeed(source);
         } else {
@@ -99,7 +104,7 @@ export async function GET(request: NextRequest) {
         }
         
         if (items.length > 0) {
-          // Relaxed Caching: 60 minutes for Bright Data / Social media, 3 minutes for standard RSS/YouTube
+          // Relaxed Caching: 60 minutes for Instagram & Social media, 3 minutes for standard RSS/YouTube
           const ttlMs = isSocial ? 1000 * 60 * 60 : 1000 * 60 * 3;
           feedCache.set(cacheKey, items, ttlMs);
         }
@@ -125,9 +130,11 @@ export async function GET(request: NextRequest) {
       return { items: cachedData, sourceName: source.name, failed: false };
     }
 
-    // 3. CACHE MISS: Block and fetch with 7.5-second timeout guard
+    // 3. CACHE MISS: Block and fetch with adaptive timeout guard (35s for Apify/Social, 7.5s for RSS)
     try {
-      const freshItems = await fetchWithTimeout(revalidate(), 7500, source.name);
+      const isSocial = source.platform === 'instagram' || ['brightdata', 'twitter', 'reddit', 'linkedin'].includes(source.platform);
+      const timeoutMs = isSocial ? 35000 : 7500;
+      const freshItems = await fetchWithTimeout(revalidate(), timeoutMs, source.name);
       return { items: freshItems || [], sourceName: source.name, failed: freshItems?.length === 0 };
     } catch (err: any) {
       console.warn(`[Live Fetch] ${source.name}:`, err.message);

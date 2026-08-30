@@ -18,6 +18,7 @@ export class RSSAdapter implements FeedAdapter {
           ['content:encoded', 'contentEncoded'],
           ['itunes:image', 'itunesImage'],
           ['itunes:duration', 'itunesDuration'],
+          ['itunes:summary', 'itunesSummary'],
         ],
       },
     });
@@ -110,7 +111,7 @@ export class RSSAdapter implements FeedAdapter {
         }
 
         // Clean summary text
-        const rawSummary = item.contentSnippet || item.summary || item.content || '';
+        const rawSummary = item.contentSnippet || item.summary || (item as any).itunesSummary || item.content || '';
         const cleanSummary = rawSummary.replace(/<[^>]*>?/gm, '').slice(0, 240);
 
         // Estimate reading time for non-podcast items
