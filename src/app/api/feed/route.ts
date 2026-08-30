@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
     // Firebase IN queries are limited to 30 elements, and we might have custom feeds.
     const snapshot = await db.collection('feed_items')
       .orderBy('publishedAt', 'desc')
-      .limit(500)
+      .limit(3000)
       .get();
       
     let items: FeedItem[] = [];
