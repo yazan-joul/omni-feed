@@ -1,0 +1,128 @@
+import { FeedSource } from '../types';
+
+export const DEFAULT_FEED_SOURCES: FeedSource[] = [
+  // --- YouTube Channels (Ingested via YouTube XML RSS or API) ---
+  {
+    id: 'yt-fireship',
+    name: 'Fireship',
+    category: 'Tech',
+    platform: 'youtube',
+    url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCsBjURrPoezykLs9EqgamOA',
+    channelId: 'UCsBjURrPoezykLs9EqgamOA',
+    description: 'High-intensity code tutorials and tech news in 100 seconds.',
+    enabled: true,
+  },
+  {
+    id: 'yt-lex-fridman',
+    name: 'Lex Fridman',
+    category: 'AI & Science',
+    platform: 'youtube',
+    url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCSHZKyawb77ixDdsGog4iWA',
+    channelId: 'UCSHZKyawb77ixDdsGog4iWA',
+    description: 'Conversations about AI, science, technology, history, and philosophy.',
+    enabled: true,
+  },
+  {
+    id: 'yt-two-minute-papers',
+    name: 'Two Minute Papers',
+    category: 'AI & Science',
+    platform: 'youtube',
+    url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCbfYPyITQ-BRhECbGTzpPvw',
+    channelId: 'UCbfYPyITQ-BRhECbGTzpPvw',
+    description: 'Awesome AI research papers summarized and explained simply.',
+    enabled: true,
+  },
+  {
+    id: 'yt-theo',
+    name: 'Theo - t3.gg',
+    category: 'Design & Dev',
+    platform: 'youtube',
+    url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCbRP3c757lWg9M-U7TyEkXA',
+    channelId: 'UCbRP3c757lWg9M-U7TyEkXA',
+    description: 'Web development, React, Next.js, and tech industry commentary.',
+    enabled: true,
+  },
+  {
+    id: 'yt-veritasium',
+    name: 'Veritasium',
+    category: 'AI & Science',
+    platform: 'youtube',
+    url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCHnyfMqiRRG1u-2MsSQLbXA',
+    channelId: 'UCHnyfMqiRRG1u-2MsSQLbXA',
+    description: 'An element of truth - videos about science, education, and anything interesting.',
+    enabled: true,
+  },
+
+  // --- RSS Feeds (Substacks, Tech Media, Hacker News) ---
+  {
+    id: 'rss-hackernews',
+    name: 'Hacker News',
+    category: 'Tech',
+    platform: 'hackernews',
+    url: 'https://news.ycombinator.com/rss',
+    description: 'Top developer and startup stories curated by the community.',
+    enabled: true,
+  },
+  {
+    id: 'rss-techcrunch',
+    name: 'TechCrunch',
+    category: 'Startups & Business',
+    platform: 'rss',
+    url: 'https://techcrunch.com/feed/',
+    description: 'Startup and technology news, funding rounds, and venture capital.',
+    enabled: true,
+  },
+  {
+    id: 'rss-theverge',
+    name: 'The Verge',
+    category: 'Tech',
+    platform: 'rss',
+    url: 'https://www.theverge.com/rss/index.xml',
+    description: 'Covering the intersection of technology, science, art, and culture.',
+    enabled: true,
+  },
+  {
+    id: 'rss-devto',
+    name: 'DEV Community',
+    category: 'Design & Dev',
+    platform: 'rss',
+    url: 'https://dev.to/feed',
+    description: 'Constructive and inclusive social network for software developers.',
+    enabled: true,
+  },
+  {
+    id: 'rss-smashingmag',
+    name: 'Smashing Magazine',
+    category: 'Design & Dev',
+    platform: 'rss',
+    url: 'https://www.smashingmagazine.com/feed/',
+    description: 'For web designers and developers with practical techniques and tips.',
+    enabled: true,
+  },
+  {
+    id: 'rss-mit-tech-review',
+    name: 'MIT Technology Review',
+    category: 'AI & Science',
+    platform: 'rss',
+    url: 'https://www.technologyreview.com/feed/',
+    description: 'Authoritative journalism on emerging technology and its impact.',
+    enabled: true,
+  },
+  {
+    id: 'rss-github-blog',
+    name: 'GitHub Engineering',
+    category: 'Design & Dev',
+    platform: 'rss',
+    url: 'https://github.blog/feed/',
+    description: 'Updates, engineering deep dives, and product launches from GitHub.',
+    enabled: true,
+  }
+];
+
+export const CATEGORIES = [
+  'All',
+  'Tech',
+  'AI & Science',
+  'Startups & Business',
+  'Design & Dev'
+] as const;

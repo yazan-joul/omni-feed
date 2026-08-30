@@ -1,0 +1,319 @@
+'use client';
+
+import React, { useState } from 'react';
+import {
+  Youtube,
+  Rss,
+  Bookmark,
+  ExternalLink,
+  Play,
+  Clock,
+  Eye,
+  Share2,
+  Check,
+  BookOpen,
+} from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { FeedItem } from '@/lib/types';
+
+interface FeedCardProps {
+  item: FeedItem;
+  viewMode: 'grid' | 'list';
+  isBookmarked: boolean;
+  isRead: boolean;
+  onToggleBookmark: (item: FeedItem) => void;
+  onOpenVideo: (item: FeedItem) => void;
+  onOpenReader: (item: FeedItem) => void;
+}
+
+export function FeedCard({
+  item,
+  viewMode,
+  isBookmarked,
+  isRead,
+  onToggleBookmark,
+  onOpenVideo,
+  onOpenReader,
+}: FeedCardProps) {
+  const [copied, setCopied] = useState(false);
+
+  const formattedDate = (() => {
+    try {
+      return formatDistanceToNow(new Date(item.publishedAt), { addSuffix: true });
+    } catch {
+      return 'Recently';
+    }
+  })();
+
+  const handleCardClick = () => {
+    if (item.mediaType === 'video' && item.videoId) {
+      onOpenVideo(item);
+    } else {
+      onOpenReader(item);
+    }
+  };
+
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(item.url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleBookmarkClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onToggleBookmark(item);
+  };
+
+  const isVideo = item.mediaType === 'video';
+
+  if (viewMode === 'list') {
+    return (
+      <article
+        onClick={handleCardClick}
+        className={`group glass-panel rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer hover:border-violet-500/40 hover:bg-slate-800/40 transition-all ${
+          isRead ? 'opacity-70' : 'opacity-100'
+        }`}
+      >
+        {/* Left: Thumbnail & Title */}
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          {item.thumbnailUrl && (
+            <div className="relative w-28 h-20 sm:w-36 sm:h-24 rounded-xl overflow-hidden flex-shrink-0 bg-slate-900">
+              <img
+                src={item.thumbnailUrl}
+                alt={item.title}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                loading="lazy"
+              />
+              {isVideo && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/20 transition-all">
+                  <div className="w-8 h-8 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-lg">
+                    <Play className="w-4 h-4 fill-white ml-0.5" />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex-1 min-w-0 space-y-1.5">
+            {/* Header info */}
+            <div className="flex items-center gap-2 text-xs">
+              <span
+                className={`flex items-center gap-1 font-semibold px-2 py-0.5 rounded-md ${
+                  isVideo
+                    ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                    : 'bg-violet-500/10 text-violet-400 border border-violet-500/20'
+                }`}
+              >
+                {isVideo ? <Youtube className="w-3 h-3 text-red-500" /> : <Rss className="w-3 h-3 text-violet-400" />}
+                {item.sourceName}
+              </span>
+              <span className="text-slate-400 flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {formattedDate}
+              </span>
+              {item.metrics?.readTime && (
+                <span className="text-slate-400 hidden sm:inline">{item.metrics.readTime}</span>
+              )}
+            </div>
+
+            {/* Title */}
+            <h3 className="font-semibold text-slate-100 group-hover:text-violet-300 transition-colors line-clamp-1 text-sm sm:text-base">
+              {item.title}
+            </h3>
+
+            {/* Snippet */}
+            {item.summary && (
+              <p className="text-xs text-slate-400 line-clamp-1 hidden md:block">
+                {item.summary}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Right: Actions */}
+        <div className="flex items-center gap-1 self-end sm:self-center">
+          <button
+            onClick={handleBookmarkClick}
+            title={isBookmarked ? 'Remove Bookmark' : 'Bookmark'}
+            className={`p-2 rounded-xl border transition-all ${
+              isBookmarked
+                ? 'bg-violet-600/20 border-violet-500/40 text-violet-400'
+                : 'bg-slate-800/60 border-white/10 text-slate-400 hover:text-white'
+            }`}
+          >
+            <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-violet-400' : ''}`} />
+          </button>
+          <button
+            onClick={handleShare}
+            title="Copy Link"
+            className="p-2 rounded-xl bg-slate-800/60 border border-white/10 text-slate-400 hover:text-white transition-all"
+          >
+            {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
+          </button>
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            title="Open original page"
+            className="p-2 rounded-xl bg-slate-800/60 border border-white/10 text-slate-400 hover:text-white transition-all"
+          >
+            <ExternalLink className="w-4 h-4" />
+          </a>
+        </div>
+      </article>
+    );
+  }
+
+  // --- Grid View Card ---
+  return (
+    <article
+      onClick={handleCardClick}
+      className={`group glass-panel rounded-2xl overflow-hidden flex flex-col cursor-pointer border border-white/10 hover:border-violet-500/50 hover:shadow-xl hover:shadow-violet-500/10 transition-all duration-300 ${
+        isRead ? 'opacity-75' : 'opacity-100'
+      }`}
+    >
+      {/* Media Image Header */}
+      {item.thumbnailUrl && (
+        <div className="relative aspect-video w-full overflow-hidden bg-slate-950">
+          <img
+            src={item.thumbnailUrl}
+            alt={item.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            loading="lazy"
+          />
+
+          {/* Media overlay gradient */}
+          <div className="absolute inset-0 media-overlay pointer-events-none" />
+
+          {/* Video Play Button Overlay */}
+          {isVideo && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:bg-red-500 transition-all duration-300">
+                <Play className="w-5 h-5 fill-white ml-0.5" />
+              </div>
+            </div>
+          )}
+
+          {/* Top Badges */}
+          <div className="absolute top-3 left-3 flex items-center gap-2">
+            <span
+              className={`flex items-center gap-1 font-semibold px-2.5 py-1 rounded-lg text-xs backdrop-blur-md ${
+                isVideo
+                  ? 'bg-red-600/90 text-white shadow-md shadow-red-600/30'
+                  : 'bg-violet-600/90 text-white shadow-md shadow-violet-600/30'
+              }`}
+            >
+              {isVideo ? <Youtube className="w-3.5 h-3.5" /> : <BookOpen className="w-3.5 h-3.5" />}
+              {isVideo ? 'Video' : 'Article'}
+            </span>
+          </div>
+
+          {/* Bottom stats inside media */}
+          <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-[11px] text-slate-200 font-medium">
+            <span className="bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-md flex items-center gap-1">
+              <Clock className="w-3 h-3 text-slate-400" />
+              {formattedDate}
+            </span>
+            {item.metrics?.views && (
+              <span className="bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-md flex items-center gap-1">
+                <Eye className="w-3 h-3 text-slate-400" />
+                {item.metrics.views} views
+              </span>
+            )}
+            {item.metrics?.readTime && (
+              <span className="bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-md">
+                {item.metrics.readTime}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Card Body */}
+      <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+        <div className="space-y-2">
+          {/* Author / Source */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 min-w-0">
+              {item.author.avatarUrl ? (
+                <img
+                  src={item.author.avatarUrl}
+                  alt={item.author.name}
+                  className="w-5 h-5 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-5 h-5 rounded-full bg-violet-600/20 text-violet-400 flex items-center justify-center text-[10px] font-bold">
+                  {item.author.name.charAt(0)}
+                </div>
+              )}
+              <span className="text-xs font-medium text-slate-300 truncate">
+                {item.sourceName || item.author.name}
+              </span>
+            </div>
+
+            {item.tags[0] && (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-white/5">
+                {item.tags[0]}
+              </span>
+            )}
+          </div>
+
+          {/* Title */}
+          <h3 className="font-semibold text-slate-100 group-hover:text-violet-300 transition-colors line-clamp-2 text-base leading-snug">
+            {item.title}
+          </h3>
+
+          {/* Summary */}
+          {item.summary && (
+            <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+              {item.summary}
+            </p>
+          )}
+        </div>
+
+        {/* Footer Actions */}
+        <div className="pt-2 border-t border-white/5 flex items-center justify-between">
+          <button
+            onClick={handleCardClick}
+            className="text-xs font-semibold text-violet-400 hover:text-violet-300 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform"
+          >
+            {isVideo ? 'Watch Video' : 'Read Article'} &rarr;
+          </button>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={handleBookmarkClick}
+              title={isBookmarked ? 'Remove Bookmark' : 'Save Bookmark'}
+              className={`p-1.5 rounded-lg border transition-all ${
+                isBookmarked
+                  ? 'bg-violet-600/20 border-violet-500/40 text-violet-400'
+                  : 'bg-slate-800/60 border-white/5 text-slate-400 hover:text-white'
+              }`}
+            >
+              <Bookmark className={`w-3.5 h-3.5 ${isBookmarked ? 'fill-violet-400' : ''}`} />
+            </button>
+            <button
+              onClick={handleShare}
+              title="Copy Link"
+              className="p-1.5 rounded-lg bg-slate-800/60 border border-white/5 text-slate-400 hover:text-white transition-all"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
+            </button>
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              title="Open in new tab"
+              className="p-1.5 rounded-lg bg-slate-800/60 border border-white/5 text-slate-400 hover:text-white transition-all"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
