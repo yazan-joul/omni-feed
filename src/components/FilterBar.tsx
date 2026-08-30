@@ -37,7 +37,6 @@ interface FilterBarProps {
   setLimitPerSource: (l: number) => void;
   unreadOnly: boolean;
   setUnreadOnly: (u: boolean) => void;
-  onMarkAllAsRead?: () => void;
   viewMode: 'grid' | 'list';
   setViewMode: (v: 'grid' | 'list') => void;
   isLoading: boolean;
@@ -58,7 +57,6 @@ export function FilterBar({
   setLimitPerSource,
   unreadOnly,
   setUnreadOnly,
-  onMarkAllAsRead,
   viewMode,
   setViewMode,
   isLoading,
@@ -291,17 +289,6 @@ export function FilterBar({
             {unreadOnly ? <EyeOff className="w-3.5 h-3.5 text-indigo-400" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
             <span>{unreadOnly ? 'Showing Unread Only' : 'Show All'}</span>
           </button>
-
-          {onMarkAllAsRead && (
-            <button
-              onClick={onMarkAllAsRead}
-              title="Mark all visible items as read"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/40 hover:bg-slate-800/60 border border-white/5 text-slate-400 hover:text-emerald-400 transition-all text-xs font-medium"
-            >
-              <CheckCheck className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Mark All Read</span>
-            </button>
-          )}
         </div>
       </div>
 

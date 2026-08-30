@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FeedItem } from '@/lib/types';
 import { FeedCard } from './FeedCard';
 import { Inbox, AlertTriangle, CheckCircle2, Clock, Calendar } from 'lucide-react';
@@ -11,6 +11,7 @@ interface FeedGridProps {
   isRead: (id: string) => boolean;
   onToggleBookmark: (item: FeedItem) => void;
   onToggleRead?: (id: string) => void;
+  onMarkAllAsRead?: (ids: string[]) => void;
   onOpenVideo: (item: FeedItem) => void;
   onOpenReader: (item: FeedItem) => void;
   onOpenPodcast: (item: FeedItem) => void;
@@ -24,6 +25,7 @@ interface TimeChunk {
   subtitle?: string;
   items: FeedItem[];
   isToday?: boolean;
+  isOlder?: boolean;
 }
 
 export function FeedGrid({
@@ -34,6 +36,7 @@ export function FeedGrid({
   isRead,
   onToggleBookmark,
   onToggleRead,
+  onMarkAllAsRead,
   onOpenVideo,
   onOpenReader,
   onOpenPodcast,
@@ -41,6 +44,8 @@ export function FeedGrid({
   onOpenAddModal,
   failedSources = [],
 }: FeedGridProps) {
+  const [olderArchiveLimit, setOlderArchiveLimit] = useState(12);
+
   // Skeleton loading state
   if (isLoading && items.length === 0) {
     return (
@@ -100,7 +105,7 @@ export function FeedGrid({
     { title: 'Today', subtitle: 'Past 24 Hours', items: todayItems, isToday: true },
     { title: 'Yesterday', subtitle: '24-48 Hours Ago', items: yesterdayItems },
     { title: 'Earlier This Week', subtitle: 'Last 7 Days', items: thisWeekItems },
-    { title: 'Older Archive', subtitle: 'Previous Stories', items: olderItems },
+    { title: 'Older Archive', subtitle: 'Previous Stories', items: olderItems, isOlder: true },
   ].filter((chunk) => chunk.items.length > 0);
 
   const totalChunks = chunks.length;
@@ -161,11 +166,20 @@ export function FeedGrid({
                 <span className="text-xs text-slate-500 font-mono">
                   ({chunk.items.length} {chunk.items.length === 1 ? 'item' : 'items'})
                 </span>
+                {chunk.subtitle && (
+                  <span className="text-[11px] text-slate-500 hidden sm:inline ml-2">
+                    {chunk.subtitle}
+                  </span>
+                )}
               </div>
-              {chunk.subtitle && (
-                <span className="text-[11px] text-slate-500 hidden sm:inline">
-                  {chunk.subtitle}
-                </span>
+              {onMarkAllAsRead && (
+                <button
+                  onClick={() => onMarkAllAsRead(chunk.items.map(i => i.id))}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition-colors"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Mark as Read
+                </button>
               )}
             </div>
 
@@ -177,7 +191,7 @@ export function FeedGrid({
                   : 'space-y-4'
               }
             >
-              {chunk.items.map((item) => (
+              {(chunk.isOlder ? chunk.items.slice(0, olderArchiveLimit) : chunk.items).map((item) => (
                 <FeedCard
                   key={item.id}
                   item={item}
@@ -192,6 +206,18 @@ export function FeedGrid({
                 />
               ))}
             </div>
+
+            {/* Load More Button for Older Archive */}
+            {chunk.isOlder && chunk.items.length > olderArchiveLimit && (
+              <div className="pt-4 flex justify-center">
+                <button
+                  onClick={() => setOlderArchiveLimit((prev) => prev + 12)}
+                  className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/10 text-sm font-medium text-slate-200 transition-all shadow-md"
+                >
+                  Load More Archive
+                </button>
+              </div>
+            )}
 
             {/* Caught-Up Divider for Today Section */}
             {chunk.isToday && (

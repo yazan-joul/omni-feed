@@ -27,16 +27,16 @@ export class TwitterAdapter implements FeedAdapter {
     const targetUrl = this.normalizeTwitterUrl(source.url);
 
     try {
-      // Call Apify Twitter Scraper actor synchronously
+      // Call Apify Twitter Scraper Lite actor synchronously
       const response = await fetch(
-        `https://api.apify.com/v2/acts/apidojo~tweet-scraper/run-sync-get-dataset-items?token=${apiToken}&timeout=45`,
+        `https://api.apify.com/v2/acts/apidojo~twitter-scraper-lite/run-sync-get-dataset-items?token=${apiToken}&timeout=45`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            startUrls: [targetUrl],
+            searchTerms: [`from:${targetUrl.replace('https://twitter.com/', '').replace('https://x.com/', '')}`],
             maxItems: 6,
           }),
         }
@@ -55,14 +55,14 @@ export class TwitterAdapter implements FeedAdapter {
 
       // Hard limit to exactly 6 posts
       return data.slice(0, 6).map((post: any, index: number): FeedItem => {
-        const rawText = post.text || post.full_text || '';
+        const rawText = post.text || post.fullText || '';
         const cleanText = rawText.replace(/\n+/g, ' ').trim();
         
         const firstLine = cleanText.split(/[.!?\n]/)[0]?.trim() || '';
         const title = firstLine.length > 5 ? firstLine.slice(0, 95) : `Tweet by @${post.author?.userName || source.name}`;
 
-        const isVideo = post.extendedEntities?.media?.some((m: any) => m.type === 'video');
-        const thumbnailUrl = post.extendedEntities?.media?.[0]?.media_url_https || post.media?.[0]?.url || undefined;
+        const isVideo = post.extendedEntities?.media?.some((m: any) => m.type === 'video') || post.entities?.media?.some((m: any) => m.type === 'video');
+        const thumbnailUrl = post.extendedEntities?.media?.[0]?.media_url_https || post.entities?.media?.[0]?.media_url_https || post.media?.[0]?.url || undefined;
 
         const postUrl = post.url || `https://twitter.com/${post.author?.userName}/status/${post.id}`;
         const authorName = post.author?.name || source.name;

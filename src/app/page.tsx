@@ -327,7 +327,6 @@ export default function HomePage() {
           setLimitPerSource={setLimitPerSource}
           unreadOnly={unreadOnly}
           setUnreadOnly={setUnreadOnly}
-          onMarkAllAsRead={handleMarkAllVisibleAsRead}
           viewMode={viewMode}
           setViewMode={setViewMode}
           isLoading={isLoading}
@@ -350,6 +349,7 @@ export default function HomePage() {
           isRead={isRead}
           onToggleBookmark={toggleBookmark}
           onToggleRead={toggleRead}
+          onMarkAllAsRead={markAllAsRead}
           onOpenVideo={handleOpenVideo}
           onOpenReader={handleOpenReader}
           onOpenPodcast={handleOpenPodcast}

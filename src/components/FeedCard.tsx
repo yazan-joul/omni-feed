@@ -116,7 +116,7 @@ export function FeedCard({
       <article
         onClick={handleCardClick}
         className={`group glass-panel rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer hover:border-violet-500/40 hover:bg-slate-800/40 transition-all ${
-          isRead ? 'opacity-60 bg-slate-900/30' : 'opacity-100'
+          isRead ? 'opacity-40 grayscale-[50%] bg-slate-900/30' : 'opacity-100'
         }`}
       >
         {/* Left: Thumbnail & Title */}
@@ -273,7 +273,7 @@ export function FeedCard({
     <article
       onClick={handleCardClick}
       className={`group glass-panel rounded-2xl overflow-hidden flex flex-col cursor-pointer border border-white/10 hover:border-violet-500/50 hover:shadow-xl hover:shadow-violet-500/10 transition-all duration-300 ${
-        isRead ? 'opacity-75' : 'opacity-100'
+        isRead ? 'opacity-40 grayscale-[50%]' : 'opacity-100'
       }`}
     >
       {/* Media Image Header */}
