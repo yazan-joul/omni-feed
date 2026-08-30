@@ -184,7 +184,6 @@ export function SourcesModal({
             sources.map((source) => {
               const isYt = source.platform === 'youtube';
               const isPodcast = source.id.startsWith('pod-') || source.url.includes('podcast') || source.url.includes('syntax') || source.url.includes('simplecast');
-              const isHn = source.platform === 'hackernews';
               const isSocial = source.platform === 'brightdata' || source.platform === 'twitter' || source.platform === 'reddit' || source.platform === 'linkedin';
 
               return (
@@ -203,8 +202,6 @@ export function SourcesModal({
                           ? 'bg-red-600/20 text-red-500'
                           : isPodcast
                           ? 'bg-amber-600/20 text-amber-400'
-                          : isHn
-                          ? 'bg-orange-600/20 text-orange-400'
                           : isSocial
                           ? 'bg-sky-600/20 text-sky-400'
                           : 'bg-violet-600/20 text-violet-400'
@@ -214,8 +211,6 @@ export function SourcesModal({
                         <Youtube className="w-4 h-4" />
                       ) : isPodcast ? (
                         <Headphones className="w-4 h-4" />
-                      ) : isHn ? (
-                        <Terminal className="w-4 h-4" />
                       ) : isSocial ? (
                         <Share2 className="w-4 h-4" />
                       ) : (
@@ -239,7 +234,7 @@ export function SourcesModal({
                         )}
                       </div>
                       <p className="text-xs text-slate-400 truncate">
-                        {source.description || source.category}
+                        {source.description}
                       </p>
                     </div>
                   </div>

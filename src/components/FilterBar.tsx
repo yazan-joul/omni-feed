@@ -12,7 +12,6 @@ import {
   Headphones,
   Youtube,
   Rss,
-  Terminal,
   Instagram,
   Facebook,
   Twitter,
@@ -23,14 +22,11 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
-import { CATEGORIES } from '@/lib/config/default-sources';
 import { ContentPlatform, MediaType, TimeRange } from '@/lib/types';
 
 interface FilterBarProps {
   searchQuery: string;
   setSearchQuery: (q: string) => void;
-  selectedCategory: string;
-  setSelectedCategory: (c: string) => void;
   selectedPlatform: ContentPlatform | 'all';
   setSelectedPlatform: (p: ContentPlatform | 'all') => void;
   selectedMediaType: MediaType | 'all';
@@ -46,13 +42,12 @@ interface FilterBarProps {
   setViewMode: (v: 'grid' | 'list') => void;
   isLoading: boolean;
   onRefresh: () => void;
+  onRefreshPlatform: (platform: ContentPlatform) => void;
 }
 
 export function FilterBar({
   searchQuery,
   setSearchQuery,
-  selectedCategory,
-  setSelectedCategory,
   selectedPlatform,
   setSelectedPlatform,
   selectedMediaType,
@@ -68,13 +63,13 @@ export function FilterBar({
   setViewMode,
   isLoading,
   onRefresh,
+  onRefreshPlatform,
 }: FilterBarProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Keyboard shortcut '/' to focus search
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === '/' && document.activeElement !== searchInputRef.current) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         searchInputRef.current?.focus();
       }
@@ -83,76 +78,127 @@ export function FilterBar({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  const renderPlatformButton = (
+    platform: ContentPlatform,
+    label: string,
+    Icon: React.ElementType,
+    activeColorClass: string,
+    iconColorClass: string,
+    hoverColorClass: string
+  ) => {
+    const isActive = selectedPlatform === platform;
+    return (
+      <div className="flex items-center">
+        <button
+          onClick={() => {
+            setSelectedPlatform(platform);
+            if (
+              (platform === 'youtube' && (selectedMediaType === 'article' || selectedMediaType === 'podcast')) ||
+              (platform === 'rss' && selectedMediaType === 'video') ||
+              (platform === 'instagram' && selectedMediaType === 'podcast')
+            ) {
+              setSelectedMediaType('all');
+            }
+          }}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-l-lg text-xs font-medium transition-all border border-r-0 ${
+            isActive
+              ? `${activeColorClass} border-transparent`
+              : `bg-slate-900/50 border-white/5 text-slate-400 ${hoverColorClass}`
+          }`}
+        >
+          <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : iconColorClass}`} />
+          {label}
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onRefreshPlatform(platform);
+          }}
+          title={`Refresh ${label}`}
+          className={`flex items-center px-2 py-1.5 rounded-r-lg border-l border-white/10 transition-all border border-l-0 ${
+            isActive
+              ? `${activeColorClass} border-transparent hover:brightness-110`
+              : `bg-slate-900/50 border-white/5 text-slate-500 hover:text-slate-300 ${hoverColorClass}`
+          }`}
+        >
+          <RotateCw className="w-3 h-3" />
+        </button>
+      </div>
+    );
+  };
+
   return (
-    <div className="w-full space-y-3 sm:space-y-4 mb-6 overflow-x-hidden">
-      {/* Top row: Search Bar, Media Switcher, View Switcher & Refresh */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        {/* Search input */}
-        <div className="relative w-full md:flex-1 min-w-0">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+    <div className="flex flex-col gap-3 mb-6 relative z-20">
+      {/* 1. Top row: Search, Format toggles, Layout toggles, Global Refresh */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-900/40 p-2 rounded-2xl border border-white/5 backdrop-blur-xl shadow-2xl">
+        
+        {/* Search */}
+        <div className="relative w-full sm:w-72 md:w-96 group">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-violet-400 transition-colors" />
           <input
             ref={searchInputRef}
             type="text"
-            placeholder="Search across videos, podcasts, articles, tags, authors... (Press '/' to focus)"
+            placeholder="Search feed... (Cmd+K)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-900/60 border border-white/10 text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 transition-all"
+            className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-950/50 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all shadow-inner"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/10 text-slate-400 transition-colors"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
 
-        {/* Media Type & View Mode Controls */}
-        <div className="flex w-full items-center gap-2 md:w-auto">
-          {/* Media Type Filter */}
-          <div className="min-w-0 flex-1 overflow-x-auto scrollbar-none rounded-xl border border-white/10 bg-slate-900/60 p-1 text-xs md:flex-none">
-            <div className="flex min-w-max items-center gap-1">
-              <button
-                onClick={() => setSelectedMediaType('all')}
-                className={`px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap ${
-                  selectedMediaType === 'all' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                All Types
-              </button>
-              <button
-                onClick={() => setSelectedMediaType('video')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap ${
-                  selectedMediaType === 'video' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Video className="w-3.5 h-3.5" />
-                Videos
-              </button>
-              <button
-                onClick={() => setSelectedMediaType('podcast')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap ${
-                  selectedMediaType === 'podcast' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Headphones className="w-3.5 h-3.5" />
-                Podcasts
-              </button>
-              <button
-                onClick={() => setSelectedMediaType('article')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap ${
-                  selectedMediaType === 'article' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <FileText className="w-3.5 h-3.5" />
-                Articles
-              </button>
-            </div>
+        {/* Right Controls */}
+        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto scrollbar-none">
+          {/* Media Format Toggles */}
+          <div className="flex items-center bg-slate-950/50 p-1 rounded-xl border border-white/5 shrink-0">
+            <button
+              onClick={() => setSelectedMediaType('all')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                selectedMediaType === 'all' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              All Types
+            </button>
+            <div className="w-px h-4 bg-white/10 mx-1" />
+            <button
+              onClick={() => setSelectedMediaType('article')}
+              title="Articles & Posts"
+              className={`p-1.5 rounded-lg transition-all ${
+                selectedMediaType === 'article' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setSelectedMediaType('video')}
+              title="Videos"
+              className={`p-1.5 rounded-lg transition-all ${
+                selectedMediaType === 'video' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Video className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setSelectedMediaType('podcast')}
+              title="Podcasts"
+              className={`p-1.5 rounded-lg transition-all ${
+                selectedMediaType === 'podcast' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Headphones className="w-4 h-4" />
+            </button>
           </div>
 
-          {/* View Mode Grid/List */}
-          <div className="flex shrink-0 items-center rounded-xl border border-white/10 bg-slate-900/60 p-1">
+          <div className="w-px h-6 bg-white/10 shrink-0" />
+
+          {/* View Layout Toggles */}
+          <div className="flex items-center bg-slate-950/50 p-1 rounded-xl border border-white/5 shrink-0">
             <button
               onClick={() => setViewMode('grid')}
               title="Grid View"
@@ -173,11 +219,11 @@ export function FilterBar({
             </button>
           </div>
 
-          {/* Live Refresh Button */}
+          {/* Global Refresh Button */}
           <button
             onClick={onRefresh}
             disabled={isLoading}
-            title="Refresh Feed"
+            title="Refresh All"
             className="shrink-0 p-2.5 rounded-xl bg-slate-900/60 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white transition-all disabled:opacity-50"
           >
             <RotateCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-violet-400' : ''}`} />
@@ -243,7 +289,7 @@ export function FilterBar({
             }`}
           >
             {unreadOnly ? <EyeOff className="w-3.5 h-3.5 text-indigo-400" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
-            <span>{unreadOnly ? 'Showing Unread Only' : 'Show All (Read & Unread)'}</span>
+            <span>{unreadOnly ? 'Showing Unread Only' : 'Show All'}</span>
           </button>
 
           {onMarkAllAsRead && (
@@ -259,141 +305,25 @@ export function FilterBar({
         </div>
       </div>
 
-      {/* 3. Bottom row: Category & Platform Pills */}
-      <div className="flex items-center justify-between gap-4 overflow-x-auto pb-1 scrollbar-none">
-        {/* Categories */}
-        <div className="flex min-w-max items-center gap-1.5">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
-                selectedCategory === cat
-                  ? 'bg-violet-600 text-white shadow-md shadow-violet-600/20'
-                  : 'bg-slate-900/50 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-white/5'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-
-        {/* Platform Filter */}
-        <div className="flex min-w-max items-center gap-1">
-          <button
-            onClick={() => setSelectedPlatform('all')}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-              selectedPlatform === 'all'
-                ? 'bg-slate-700 text-white'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            All Platforms
-          </button>
-          <button
-            onClick={() => {
-              setSelectedPlatform('youtube');
-              if (selectedMediaType === 'article' || selectedMediaType === 'podcast') {
-                setSelectedMediaType('all');
-              }
-            }}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-              selectedPlatform === 'youtube'
-                ? 'bg-red-600/80 text-white'
-                : 'text-slate-400 hover:text-red-400'
-            }`}
-          >
-            <Youtube className="w-3.5 h-3.5 text-red-500" />
-            YouTube
-          </button>
-          <button
-            onClick={() => {
-              setSelectedPlatform('hackernews');
-              if (selectedMediaType === 'video' || selectedMediaType === 'podcast') {
-                setSelectedMediaType('all');
-              }
-            }}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-              selectedPlatform === 'hackernews'
-                ? 'bg-amber-600/80 text-white'
-                : 'text-slate-400 hover:text-amber-400'
-            }`}
-          >
-            <Terminal className="w-3.5 h-3.5 text-amber-500" />
-            Hacker News
-          </button>
-          <button
-            onClick={() => {
-              setSelectedPlatform('rss');
-              if (selectedMediaType === 'video') {
-                setSelectedMediaType('all');
-              }
-            }}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-              selectedPlatform === 'rss'
-                ? 'bg-blue-600/80 text-white'
-                : 'text-slate-400 hover:text-blue-400'
-            }`}
-          >
-            <Rss className="w-3.5 h-3.5 text-blue-400" />
-            RSS
-          </button>
-          <button
-            onClick={() => {
-              setSelectedPlatform('instagram');
-              if (selectedMediaType === 'podcast') {
-                setSelectedMediaType('all');
-              }
-            }}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-              selectedPlatform === 'instagram'
-                ? 'bg-pink-600/80 text-white'
-                : 'text-slate-400 hover:text-pink-400'
-            }`}
-          >
-            <Instagram className="w-3.5 h-3.5 text-pink-400" />
-            Instagram
-          </button>
-          <button
-            onClick={() => {
-              setSelectedPlatform('facebook');
-            }}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-              selectedPlatform === 'facebook'
-                ? 'bg-blue-600/80 text-white'
-                : 'text-slate-400 hover:text-blue-500'
-            }`}
-          >
-            <Facebook className="w-3.5 h-3.5 text-blue-500" />
-            Facebook
-          </button>
-          <button
-            onClick={() => {
-              setSelectedPlatform('twitter');
-            }}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-              selectedPlatform === 'twitter'
-                ? 'bg-sky-500/80 text-white'
-                : 'text-slate-400 hover:text-sky-400'
-            }`}
-          >
-            <Twitter className="w-3.5 h-3.5 text-sky-400" />
-            Twitter
-          </button>
-          <button
-            onClick={() => {
-              setSelectedPlatform('reddit');
-            }}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-              selectedPlatform === 'reddit'
-                ? 'bg-orange-600/80 text-white'
-                : 'text-slate-400 hover:text-orange-500'
-            }`}
-          >
-            <MessageCircle className="w-3.5 h-3.5 text-orange-500" />
-            Reddit
-          </button>
-        </div>
+      {/* 3. Bottom row: Platform Filter & Refresh Buttons */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none mt-2">
+        <button
+          onClick={() => setSelectedPlatform('all')}
+          className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+            selectedPlatform === 'all'
+              ? 'bg-slate-700 text-white border-slate-600'
+              : 'bg-slate-900/50 text-slate-400 hover:text-slate-200 border-white/5'
+          }`}
+        >
+          All Platforms
+        </button>
+        
+        {renderPlatformButton('youtube', 'YouTube', Youtube, 'bg-red-600/80 text-white', 'text-red-500', 'hover:text-red-400')}
+        {renderPlatformButton('rss', 'RSS', Rss, 'bg-blue-600/80 text-white', 'text-blue-400', 'hover:text-blue-400')}
+        {renderPlatformButton('twitter', 'Twitter', Twitter, 'bg-sky-500/80 text-white', 'text-sky-400', 'hover:text-sky-400')}
+        {renderPlatformButton('reddit', 'Reddit', MessageCircle, 'bg-orange-600/80 text-white', 'text-orange-500', 'hover:text-orange-500')}
+        {renderPlatformButton('instagram', 'Instagram', Instagram, 'bg-pink-600/80 text-white', 'text-pink-400', 'hover:text-pink-400')}
+        {renderPlatformButton('facebook', 'Facebook', Facebook, 'bg-blue-700/80 text-white', 'text-blue-500', 'hover:text-blue-500')}
       </div>
     </div>
   );

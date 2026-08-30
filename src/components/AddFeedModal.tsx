@@ -28,7 +28,6 @@ interface AddFeedModalProps {
 export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources }: AddFeedModalProps) {
   const [url, setUrl] = useState('');
   const [name, setName] = useState('');
-  const [category, setCategory] = useState<string>('Tech');
   const [platform, setPlatform] = useState<ContentPlatform>('rss');
   const [isValidating, setIsValidating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -129,7 +128,6 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources }: 
       const newSource: FeedSource = {
         id: `custom-${Date.now()}`,
         name: sourceName,
-        category: (category as any) || 'Tech',
         platform: finalPlatform,
         url: finalUrl,
         channelId: currentValidation.channelId,
@@ -365,38 +363,22 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources }: 
             />
           </div>
 
-          {/* Category & Platform Selectors */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">Category</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs focus:outline-none focus:ring-2 focus:ring-violet-500/50"
-              >
-                {CATEGORIES.filter((c) => c !== 'All').map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">Platform</label>
-              <select
-                value={platform}
-                onChange={(e) => setPlatform(e.target.value as ContentPlatform)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs focus:outline-none focus:ring-2 focus:ring-violet-500/50"
-              >
-                <option value="reddit">Reddit Subreddit (r/...)</option>
-                <option value="twitter">X / Twitter (@...)</option>
-                <option value="brightdata">Instagram / Social Scraper</option>
-                <option value="youtube">YouTube Channel</option>
-                <option value="rss">RSS / Atom / Blog</option>
-                <option value="substack">Substack</option>
-              </select>
-            </div>
+          {/* Platform Selector */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-300">Platform</label>
+            <select
+              value={platform}
+              onChange={(e) => setPlatform(e.target.value as ContentPlatform)}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+            >
+              <option value="reddit">Reddit Subreddit (r/...)</option>
+              <option value="twitter">X / Twitter (@...)</option>
+              <option value="facebook">Facebook Page</option>
+              <option value="instagram">Instagram Profile</option>
+              <option value="youtube">YouTube Channel</option>
+              <option value="rss">RSS / Atom / Blog</option>
+              <option value="substack">Substack</option>
+            </select>
           </div>
 
           {/* Submit CTA */}

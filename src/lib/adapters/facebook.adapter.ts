@@ -87,7 +87,7 @@ export class FacebookAdapter implements FeedAdapter {
             comments: post.comments || post.commentsCount,
             shares: post.shares || post.sharesCount,
           },
-          tags: ['Facebook', source.category, source.name],
+          tags: ['Facebook',  source.name],
           sourceName: source.name,
           sourceId: source.id,
           isCustom: source.isCustom,

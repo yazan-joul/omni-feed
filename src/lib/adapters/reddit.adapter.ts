@@ -87,7 +87,7 @@ export class RedditAdapter implements FeedAdapter {
             likes: post.upvotes || post.score,
             comments: post.numComments || post.num_comments,
           },
-          tags: ['Reddit', source.category, source.name],
+          tags: ['Reddit',  source.name],
           sourceName: source.name,
           sourceId: source.id,
           isCustom: source.isCustom,

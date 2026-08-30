@@ -44,12 +44,12 @@ const fetchWithTimeout = <T>(promise: Promise<T>, ms: number, sourceName: string
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const category = searchParams.get('category');
   const platform = searchParams.get('platform');
   const mediaType = searchParams.get('mediaType');
   const search = searchParams.get('search')?.toLowerCase();
   const customSourcesJson = searchParams.get('customSources');
   const disabledDefaultsJson = searchParams.get('disabledDefaults');
+  const forceRefresh = searchParams.get('forceRefresh') === 'true';
 
   // Load default sources
   let allSources: FeedSource[] = [...DEFAULT_FEED_SOURCES];
@@ -74,14 +74,12 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Filter sources by enabled status and requested categories
+  // Filter sources by enabled status
   let targetSources = allSources.filter((s) => s.enabled);
 
-  if (category && category !== 'All' && category !== 'all') {
-    targetSources = targetSources.filter((s) => s.category.toLowerCase() === category.toLowerCase());
-  }
+  const isSpecificPlatform = platform && platform !== 'all' && platform !== 'All';
 
-  if (platform && platform !== 'all') {
+  if (isSpecificPlatform) {
     targetSources = targetSources.filter((s) => s.platform.toLowerCase() === platform.toLowerCase());
   }
 
@@ -119,8 +117,8 @@ export async function GET(request: NextRequest) {
         }
         
         if (items.length > 0) {
-          // Relaxed Caching: 60 minutes for Instagram & Social media, 3 minutes for standard RSS/YouTube
-          const ttlMs = isSocial ? 1000 * 60 * 60 : 1000 * 60 * 3;
+          // BMAD Strategy: 6 hours TTL for Apify/Social, 3 minutes for standard RSS/YouTube
+          const ttlMs = isSocial ? 1000 * 60 * 60 * 6 : 1000 * 60 * 3;
           feedCache.set(cacheKey, items, ttlMs);
         }
         return items;
@@ -130,28 +128,51 @@ export async function GET(request: NextRequest) {
       }
     };
 
-    // 1. FRESH HIT: Return immediately without revalidating
+    const isInstagram = source.platform === 'instagram';
+    const isFacebook = source.platform === 'facebook';
+    const isTwitter = source.platform === 'twitter';
+    const isReddit = source.platform === 'reddit';
+    const isSocial = isInstagram || isFacebook || isTwitter || isReddit || ['brightdata', 'linkedin'].includes(source.platform);
+
+    // If forceRefresh is requested, bypass cache entirely
+    if (forceRefresh) {
+      try {
+        const timeoutMs = isSocial ? 35000 : 7500;
+        const freshItems = await fetchWithTimeout(revalidate(), timeoutMs, source.name);
+        return { items: freshItems || [], sourceName: source.name, failed: freshItems?.length === 0 };
+      } catch (err: any) {
+        console.warn(`[Force Refresh] ${source.name}:`, err.message);
+        return { items: cachedData || [], sourceName: source.name, failed: true };
+      }
+    }
+
+    // BMAD Strategy: Lazy Loading Social Feeds
+    // If not viewing a specific platform, don't proactively revalidate social feeds in the background.
+    // Only revalidate if they click the specific platform filter, or if they click the refresh button.
+    const shouldLazyLoad = isSocial && !isSpecificPlatform;
+
+    // 1. FRESH HIT
     if (cachedData && !isStale) {
       return { items: cachedData, sourceName: source.name, failed: false };
     }
 
-    // 2. STALE HIT (SWR): Return immediately, but revalidate in the background
+    // 2. STALE HIT
     if (cachedData && isStale) {
-      // Use Next.js 15 `after()` to ensure the background task completes on Vercel Edge/Serverless
-      // without blocking the main response to the user.
-      after(async () => {
-        await revalidate().catch(console.error);
-      });
+      if (!shouldLazyLoad) {
+        after(async () => {
+          await revalidate().catch(console.error);
+        });
+      }
       return { items: cachedData, sourceName: source.name, failed: false };
     }
 
-    // 3. CACHE MISS: Block and fetch with adaptive timeout guard (35s for Apify/Social, 7.5s for RSS)
+    // 3. CACHE MISS
+    if (shouldLazyLoad) {
+      // If no cache exists and we are lazy loading, don't block and burn credits on the "All" view.
+      return { items: [], sourceName: source.name, failed: false };
+    }
+
     try {
-      const isInstagram = source.platform === 'instagram';
-      const isFacebook = source.platform === 'facebook';
-      const isTwitter = source.platform === 'twitter';
-      const isReddit = source.platform === 'reddit';
-      const isSocial = isInstagram || isFacebook || isTwitter || isReddit || ['brightdata', 'linkedin'].includes(source.platform);
       const timeoutMs = isSocial ? 35000 : 7500;
       const freshItems = await fetchWithTimeout(revalidate(), timeoutMs, source.name);
       return { items: freshItems || [], sourceName: source.name, failed: freshItems?.length === 0 };

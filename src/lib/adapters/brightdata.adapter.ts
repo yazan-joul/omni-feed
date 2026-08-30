@@ -188,7 +188,7 @@ export class BrightDataAdapter implements FeedAdapter {
                 likes: '1.5K',
                 retweets: '240',
               },
-              tags: ['X (Twitter)', source.category || 'Tech', `@${handle}`],
+              tags: ['X (Twitter)', `@${handle}`],
               sourceName: source.name || `@${handle}`,
               sourceId: source.id,
               isCustom: source.isCustom,
@@ -280,7 +280,7 @@ export class BrightDataAdapter implements FeedAdapter {
               likes: likesMatch ? likesMatch[1] : undefined,
               comments: commentsMatch ? commentsMatch[1] : undefined,
             },
-            tags: ['Instagram', source.category || 'Lifestyle', `@${handle}`],
+            tags: ['Instagram', `@${handle}`],
             sourceName: source.name || `@${handle}`,
             sourceId: source.id,
             isCustom: source.isCustom,
@@ -339,7 +339,7 @@ export class BrightDataAdapter implements FeedAdapter {
               likes: this.formatMetricNumber(d.score || 0),
               comments: this.formatMetricNumber(d.num_comments || 0),
             },
-            tags: ['Reddit', `r/${sub}`, source.category || 'Tech'],
+            tags: ['Reddit', `r/${sub}`],
             sourceName: source.name || `r/${sub}`,
             sourceId: source.id,
             isCustom: source.isCustom,
@@ -390,7 +390,7 @@ export class BrightDataAdapter implements FeedAdapter {
             likes: '1.2K',
             comments: '150',
           },
-          tags: [isTwitter ? 'X (Twitter)' : isInstagram ? 'Instagram' : 'Social', source.category, source.name],
+          tags: [isTwitter ? 'X (Twitter)' : isInstagram ? 'Instagram' : 'Social',  source.name],
           sourceName: source.name,
           sourceId: source.id,
           isCustom: source.isCustom,
@@ -432,8 +432,7 @@ export class BrightDataAdapter implements FeedAdapter {
 
     // Platform tags
     const tags = [
-      isTwitter ? 'X (Twitter)' : isReddit ? 'Reddit' : isLinkedIn ? 'LinkedIn' : 'Social',
-      source.category,
+      isTwitter ? 'X (Twitter)' : isReddit ? 'Reddit' : isLinkedIn ? 'LinkedIn' : 'Social', 
       source.name,
     ];
 

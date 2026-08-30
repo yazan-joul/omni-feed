@@ -55,26 +55,13 @@ export async function POST(request: NextRequest) {
       const title = out['@_title'] || out['@_text'] || 'Imported Feed';
       const xmlUrl = out['@_xmlUrl'];
       
-      // Attempt to categorize loosely based on tags or default to Custom
-      let category = 'Custom';
-      if (out['@_category']) {
-        // try to map OPML category to our strict categories
-        const cat = out['@_category'].toLowerCase();
-        if (cat.includes('tech') || cat.includes('dev')) category = 'Tech';
-        else if (cat.includes('science') || cat.includes('ai')) category = 'AI & Science';
-        else if (cat.includes('business') || cat.includes('startup')) category = 'Startups & Business';
-        else if (cat.includes('news')) category = 'News';
-      }
-
       let platform: any = 'rss';
       if (xmlUrl.includes('youtube.com') || xmlUrl.includes('youtu.be')) platform = 'youtube';
       else if (xmlUrl.includes('substack.com')) platform = 'substack';
-      else if (xmlUrl.includes('news.ycombinator.com')) platform = 'hackernews';
 
       return {
         id: `imported-${Date.now()}-${index}`,
         name: title,
-        category: category as any,
         platform,
         url: xmlUrl,
         enabled: true,
@@ -122,19 +109,9 @@ export async function GET(request: NextRequest) {
   xml += `  </head>\n`;
   xml += `  <body>\n`;
 
-  // Group by category
-  const categorized: Record<string, FeedSource[]> = {};
-  sourcesToExport.forEach(s => {
-    if (!categorized[s.category]) categorized[s.category] = [];
-    categorized[s.category].push(s);
-  });
-
-  for (const [category, sources] of Object.entries(categorized)) {
-    xml += `    <outline text="${escapeXml(category)}" title="${escapeXml(category)}">\n`;
-    for (const source of sources) {
-      xml += `      <outline text="${escapeXml(source.name)}" title="${escapeXml(source.name)}" type="rss" xmlUrl="${escapeXml(source.url)}" />\n`;
-    }
-    xml += `    </outline>\n`;
+  // Flat list, no categories
+  for (const source of sourcesToExport) {
+    xml += `    <outline text="${escapeXml(source.name)}" title="${escapeXml(source.name)}" type="rss" xmlUrl="${escapeXml(source.url)}" />\n`;
   }
 
   xml += `  </body>\n`;

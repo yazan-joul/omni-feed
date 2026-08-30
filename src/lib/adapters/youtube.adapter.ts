@@ -206,7 +206,7 @@ export class YouTubeAdapter implements FeedAdapter {
           metrics: {
             views: formattedViews,
           },
-          tags: ['Video', source.category, source.name],
+          tags: ['Video',  source.name],
           sourceName: source.name || authorName,
           sourceId: source.id,
           isCustom: source.isCustom,
@@ -243,7 +243,7 @@ export class YouTubeAdapter implements FeedAdapter {
           publishedAt: snippet.publishedAt,
           thumbnailUrl: snippet.thumbnails?.high?.url || snippet.thumbnails?.medium?.url,
           summary: decodeHtmlEntities(snippet.description),
-          tags: ['Video', source.category],
+          tags: ['Video'],
           sourceName: source.name,
           sourceId: source.id,
           isCustom: source.isCustom,

@@ -21,7 +21,6 @@ export default function HomePage() {
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedPlatform, setSelectedPlatform] = useState<ContentPlatform | 'all'>('all');
   const [selectedMediaType, setSelectedMediaType] = useState<MediaType | 'all'>('all');
   const [timeRange, setTimeRange] = useState<TimeRange>('all');
@@ -95,7 +94,6 @@ export default function HomePage() {
 
     try {
       const params = new URLSearchParams();
-      if (selectedCategory && selectedCategory !== 'All') params.set('category', selectedCategory);
       if (selectedPlatform && selectedPlatform !== 'all') params.set('platform', selectedPlatform);
       if (selectedMediaType && selectedMediaType !== 'all') params.set('mediaType', selectedMediaType);
       if (searchQuery) params.set('search', searchQuery);
@@ -162,13 +160,24 @@ export default function HomePage() {
         setIsLoading(false);
       }
     }
-  }, [selectedCategory, selectedPlatform, selectedMediaType, searchQuery, customOnly, sources]);
+  }, [selectedPlatform, selectedMediaType, searchQuery, customOnly, sources]);
 
   useEffect(() => {
     if (mounted) {
       fetchFeed();
     }
   }, [fetchFeed, mounted]);
+
+  const handleRefreshPlatform = async (platform: ContentPlatform) => {
+    setIsLoading(true);
+    try {
+      await fetch(`/api/feed?platform=${platform}&forceRefresh=true`);
+      await fetchFeed();
+    } catch (err) {
+      console.error('Error refreshing platform:', err);
+      setIsLoading(false);
+    }
+  };
 
   // Handlers
   const handleOpenVideo = (item: FeedItem) => {
@@ -195,14 +204,12 @@ export default function HomePage() {
       !searchQuery ||
       item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.summary?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      selectedCategory === 'All' || item.tags.some((t) => t.toLowerCase() === selectedCategory.toLowerCase());
     const matchesPlatform =
       selectedPlatform === 'all' || item.platform === selectedPlatform;
     const matchesMediaType =
       selectedMediaType === 'all' || item.mediaType === selectedMediaType;
 
-    return matchesSearch && matchesCategory && matchesPlatform && matchesMediaType;
+    return matchesSearch && matchesPlatform && matchesMediaType;
   });
 
   // Base raw items for active tab
@@ -292,8 +299,6 @@ export default function HomePage() {
         <FilterBar
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
-          selectedCategory={selectedCategory}
-          setSelectedCategory={setSelectedCategory}
           selectedPlatform={selectedPlatform}
           setSelectedPlatform={setSelectedPlatform}
           selectedMediaType={selectedMediaType}
@@ -309,6 +314,7 @@ export default function HomePage() {
           setViewMode={setViewMode}
           isLoading={isLoading}
           onRefresh={fetchFeed}
+          onRefreshPlatform={handleRefreshPlatform}
         />
 
         {error && (
@@ -331,7 +337,6 @@ export default function HomePage() {
           onOpenPodcast={handleOpenPodcast}
           onResetFilters={() => {
             setSearchQuery('');
-            setSelectedCategory('All');
             setSelectedPlatform('all');
             setSelectedMediaType('all');
             setTimeRange('all');

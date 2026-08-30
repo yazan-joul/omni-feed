@@ -2,7 +2,6 @@ export type ContentPlatform =
   | 'youtube'
   | 'rss'
   | 'substack'
-  | 'hackernews'
   | 'reddit'
   | 'twitter'
   | 'instagram'
@@ -53,7 +52,6 @@ export interface FeedItem {
 export interface FeedSource {
   id: string;
   name: string;
-  category: 'Tech' | 'AI & Science' | 'Startups & Business' | 'Design & Dev' | 'News' | 'Custom';
   platform: ContentPlatform;
   url: string;
   channelId?: string;
@@ -68,7 +66,6 @@ export type TimeRange = '24h' | '3d' | '7d' | 'all';
 export interface FeedFilterState {
   searchQuery: string;
   selectedPlatform: ContentPlatform | 'all';
-  selectedCategory: string | 'all';
   selectedMediaType: MediaType | 'all';
   timeRange: TimeRange;
   limitPerSource: number; // 0 = unlimited, or 3, 5, 10, 15

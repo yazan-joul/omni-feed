@@ -89,7 +89,7 @@ export class InstagramAdapter implements FeedAdapter {
             comments: post.commentsCount ? Number(post.commentsCount).toLocaleString() : undefined,
             views: post.videoViewCount ? Number(post.videoViewCount).toLocaleString() : undefined,
           },
-          tags: ['Instagram', source.category, source.name],
+          tags: ['Instagram',  source.name],
           sourceName: source.name,
           sourceId: source.id,
           isCustom: source.isCustom,

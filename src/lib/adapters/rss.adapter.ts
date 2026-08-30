@@ -107,7 +107,7 @@ export class RSSAdapter implements FeedAdapter {
             'Startups & Business': 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?auto=format&fit=crop&w=800&q=80',
             'Design & Dev': 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=800&q=80',
           };
-          thumbnailUrl = defaultThumbnails[source.category] || defaultThumbnails['Tech'];
+          thumbnailUrl = defaultThumbnails['Tech'];
         }
 
         // Clean summary text
@@ -141,7 +141,7 @@ export class RSSAdapter implements FeedAdapter {
           metrics: podcastAudioUrl ? undefined : {
             readTime: `${readTimeMinutes} min read`,
           },
-          tags: [source.category, source.name],
+          tags: [ source.name],
           sourceName: source.name,
           sourceId: source.id,
           audioUrl: podcastAudioUrl,

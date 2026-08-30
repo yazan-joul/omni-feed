@@ -88,7 +88,7 @@ export class TwitterAdapter implements FeedAdapter {
             retweets: post.retweetCount,
             views: post.viewCount,
           },
-          tags: ['Twitter', 'X', source.category, source.name],
+          tags: ['Twitter', 'X',  source.name],
           sourceName: source.name,
           sourceId: source.id,
           isCustom: source.isCustom,

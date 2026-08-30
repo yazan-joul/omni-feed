@@ -28,7 +28,7 @@ export const FALLBACK_FEED_ITEMS: FeedItem[] = [
   },
   {
     id: 'mock-rss-1',
-    platform: 'hackernews',
+    platform: 'rss',
     mediaType: 'article',
     title: 'Show HN: Building High-Performance Spec-Driven Agents for Rapid Hackathons',
     url: 'https://news.ycombinator.com',

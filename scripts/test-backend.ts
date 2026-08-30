@@ -80,7 +80,6 @@ const dataUri = `data:text/xml;base64,${Buffer.from(mockXml).toString('base64')}
 const testSource: FeedSource = {
   id: 'test-pod',
   name: 'Test Podcast Source',
-  category: 'Tech',
   platform: 'rss',
   url: dataUri,
   enabled: true,
@@ -126,7 +125,6 @@ setTimeout(async () => {
     const twitterSource: FeedSource = {
       id: 'x-openai',
       name: 'OpenAI Updates',
-      category: 'AI & Science',
       platform: 'brightdata',
       url: 'https://x.com/OpenAI',
       enabled: true,
@@ -160,7 +158,6 @@ setTimeout(async () => {
     const redditSource: FeedSource = {
       id: 'reddit-localllama',
       name: 'r/LocalLLaMA',
-      category: 'AI & Science',
       platform: 'reddit',
       url: 'https://reddit.com/r/LocalLLaMA',
       enabled: true,
