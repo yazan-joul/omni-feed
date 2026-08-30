@@ -52,7 +52,6 @@ export function Navbar({
               </span>
             </div>
             <div className="flex items-center gap-1.5 text-[11px] text-slate-400 sm:text-xs">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
               <span className="truncate">{sourcesCount} Live Streams</span>
             </div>
           </div>
@@ -81,11 +80,6 @@ export function Navbar({
           >
             <Bookmark className="w-4 h-4" />
             Saved
-            {bookmarkCount > 0 && (
-              <span className="ml-1 px-1.5 py-0.2 rounded-full text-[11px] bg-violet-400/20 text-violet-300 font-bold">
-                {bookmarkCount}
-              </span>
-            )}
           </button>
         </div>
 

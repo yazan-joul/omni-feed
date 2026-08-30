@@ -34,7 +34,7 @@ export class RedditAdapter implements FeedAdapter {
     try {
       // Call Apify Reddit Scraper actor synchronously
       const response = await fetch(
-        `https://api.apify.com/v2/acts/fatihtahta~reddit-scraper/run-sync-get-dataset-items?token=${apiToken}&timeout=45`,
+        `https://api.apify.com/v2/acts/harshmaur~reddit-scraper/run-sync-get-dataset-items?token=${apiToken}&timeout=45`,
         {
           method: 'POST',
           headers: {
@@ -42,6 +42,7 @@ export class RedditAdapter implements FeedAdapter {
           },
           body: JSON.stringify({
             startUrls: [{ url: targetUrl }],
+            maxPosts: 6,
             maxItems: 6,
           }),
         }
@@ -60,17 +61,28 @@ export class RedditAdapter implements FeedAdapter {
 
       // Hard limit to exactly 6 posts
       return data.slice(0, 6).map((post: any, index: number): FeedItem => {
-        const rawText = post.text || post.selftext || '';
+        const rawText = post.body || post.text || post.selftext || '';
         const titleText = post.title || '';
         
-        const isVideo = post.isVideo || Boolean(post.media?.reddit_video);
-        const thumbnailUrl = post.thumbnail && post.thumbnail.startsWith('http') ? post.thumbnail : undefined;
+        const isVideo = Boolean(post.isVideo || post.mediaType === 'video' || post.videoUrl);
+        const thumbnailUrl =
+          (post.thumbnail && post.thumbnail.startsWith('http') && !post.thumbnail.includes('default') && !post.thumbnail.includes('self'))
+            ? post.thumbnail
+            : post.images?.[0]?.url || (Array.isArray(post.images) && typeof post.images[0] === 'string' ? post.images[0] : undefined);
 
-        const postUrl = post.url || post.permalink ? `https://reddit.com${post.permalink}` : targetUrl;
-        const authorName = post.author || source.name;
+        const postUrl = post.postUrl || (post.permalink ? `https://reddit.com${post.permalink}` : post.url) || targetUrl;
+        const authorName = post.authorName || post.author || source.name;
+
+        let publishedAt = new Date().toISOString();
+        if (post.createdAt) {
+          const parsed = new Date(post.createdAt).toISOString();
+          if (!isNaN(new Date(parsed).getTime())) publishedAt = parsed;
+        } else if (post.created_utc) {
+          publishedAt = new Date(post.created_utc * 1000).toISOString();
+        }
 
         return {
-          id: `rd-${source.id}-${post.id || index}`,
+          id: `rd-${source.id}-${post.id || post.parsedId || index}`,
           platform: 'reddit',
           mediaType: isVideo ? 'video' : 'article',
           title: decodeHtmlEntities(titleText),
@@ -79,15 +91,15 @@ export class RedditAdapter implements FeedAdapter {
             name: decodeHtmlEntities(authorName),
             avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}&background=FF4500&color=fff`,
           },
-          publishedAt: post.createdAt || post.created_utc ? new Date(post.created_utc * 1000).toISOString() : new Date().toISOString(),
+          publishedAt,
           thumbnailUrl,
           summary: rawText ? `${decodeHtmlEntities(rawText.slice(0, 220))}...` : undefined,
           content: decodeHtmlEntities(rawText),
           metrics: {
-            likes: post.upvotes || post.score,
-            comments: post.numComments || post.num_comments,
+            likes: post.upVotes ?? post.score ?? 0,
+            comments: post.commentsCount ?? post.numComments ?? 0,
           },
-          tags: ['Reddit',  source.name],
+          tags: ['Reddit', source.name],
           sourceName: source.name,
           sourceId: source.id,
           isCustom: source.isCustom,

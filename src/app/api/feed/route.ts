@@ -20,10 +20,35 @@ const facebookAdapter = new FacebookAdapter();
 const twitterAdapter = new TwitterAdapter();
 const redditAdapter = new RedditAdapter();
 
+// Limit social actor concurrency to max 2 concurrent runs to respect Apify plan limits
+let socialRunning = 0;
+const socialQueue: (() => void)[] = [];
+
+const acquireSocialLock = async (): Promise<void> => {
+  if (socialRunning < 2) {
+    socialRunning++;
+    return;
+  }
+  return new Promise((resolve) => {
+    socialQueue.push(() => {
+      socialRunning++;
+      resolve();
+    });
+  });
+};
+
+const releaseSocialLock = () => {
+  socialRunning = Math.max(0, socialRunning - 1);
+  if (socialQueue.length > 0 && socialRunning < 2) {
+    const next = socialQueue.shift();
+    if (next) next();
+  }
+};
+
 // Next.js Route Cache TTL config
 export const revalidate = 300;
 
-// --- 3.5s Timeout Guard Wrapper ---
+// --- Timeout Guard Wrapper ---
 const fetchWithTimeout = <T>(promise: Promise<T>, ms: number, sourceName: string): Promise<T> => {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -92,13 +117,18 @@ export async function GET(request: NextRequest) {
 
     // Background fetch function to re-ingest and update cache
     const revalidate = async (): Promise<FeedItem[]> => {
+      const isInstagram = source.platform === 'instagram';
+      const isFacebook = source.platform === 'facebook';
+      const isTwitter = source.platform === 'twitter';
+      const isReddit = source.platform === 'reddit';
+      const isSocial = isInstagram || isFacebook || isTwitter || isReddit || ['brightdata', 'linkedin'].includes(source.platform);
+
+      if (isSocial) {
+        await acquireSocialLock();
+      }
+
       try {
         let items: FeedItem[] = [];
-        const isInstagram = source.platform === 'instagram';
-        const isFacebook = source.platform === 'facebook';
-        const isTwitter = source.platform === 'twitter';
-        const isReddit = source.platform === 'reddit';
-        const isSocial = isInstagram || isFacebook || isTwitter || isReddit || ['brightdata', 'linkedin'].includes(source.platform);
 
         if (source.platform === 'youtube') {
           items = await ytAdapter.fetchFeed(source);
@@ -125,6 +155,10 @@ export async function GET(request: NextRequest) {
       } catch (err: any) {
         console.warn(`[Revalidate Error] Source ${source.name}:`, err.message);
         throw err; // Re-throw to be caught by fetchWithTimeout or outer try-catch
+      } finally {
+        if (isSocial) {
+          releaseSocialLock();
+        }
       }
     };
 

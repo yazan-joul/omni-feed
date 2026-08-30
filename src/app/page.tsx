@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { FilterBar } from '@/components/FilterBar';
 import { FeedGrid } from '@/components/FeedGrid';
@@ -19,11 +19,11 @@ export default function HomePage() {
   // Navigation tabs
   const [activeTab, setActiveTab] = useState<'feed' | 'bookmarks'>('feed');
 
-  // Filters
+  // Filters (Default to last 24 hours)
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState<ContentPlatform | 'all'>('all');
   const [selectedMediaType, setSelectedMediaType] = useState<MediaType | 'all'>('all');
-  const [timeRange, setTimeRange] = useState<TimeRange>('all');
+  const [timeRange, setTimeRange] = useState<TimeRange>('24h');
   const [limitPerSource, setLimitPerSource] = useState<number>(0); // 0 = all
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -79,7 +79,7 @@ export default function HomePage() {
 
   const fetchAbortController = useRef<AbortController | null>(null);
 
-  // Fetch Aggregated Feed Data
+  // Fetch Aggregated Feed Data (Only runs on mount, source changes, or manual refresh)
   const fetchFeed = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -94,9 +94,6 @@ export default function HomePage() {
 
     try {
       const params = new URLSearchParams();
-      if (selectedPlatform && selectedPlatform !== 'all') params.set('platform', selectedPlatform);
-      if (selectedMediaType && selectedMediaType !== 'all') params.set('mediaType', selectedMediaType);
-      if (searchQuery) params.set('search', searchQuery);
 
       // Pass disabled or removed default source IDs
       const activeDefaultIds = sources.filter((s) => !s.isCustom && s.enabled).map((s) => s.id);
@@ -160,7 +157,7 @@ export default function HomePage() {
         setIsLoading(false);
       }
     }
-  }, [selectedPlatform, selectedMediaType, searchQuery, customOnly, sources]);
+  }, [customOnly, sources]);
 
   useEffect(() => {
     if (mounted) {
@@ -198,54 +195,78 @@ export default function HomePage() {
     setActivePodcastItem(item);
   };
 
-  // Filter Bookmarks
-  const filteredBookmarks = bookmarks.filter((item) => {
-    const matchesSearch =
-      !searchQuery ||
-      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.summary?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesPlatform =
-      selectedPlatform === 'all' || item.platform === selectedPlatform;
-    const matchesMediaType =
-      selectedMediaType === 'all' || item.mediaType === selectedMediaType;
+  // Instant 0ms In-Memory Filtering (Client-side useMemo)
+  const displayedItems = useMemo(() => {
+    const rawItems = activeTab === 'feed' ? feedItems : bookmarks;
 
-    return matchesSearch && matchesPlatform && matchesMediaType;
-  });
+    const filtered = rawItems.filter((item) => {
+      // 1. Search Query Filter
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const matchesTitle = item.title.toLowerCase().includes(q);
+        const matchesSummary = item.summary?.toLowerCase().includes(q);
+        const matchesAuthor = item.author.name.toLowerCase().includes(q);
+        const matchesTags = item.tags.some((t) => t.toLowerCase().includes(q));
+        if (!matchesTitle && !matchesSummary && !matchesAuthor && !matchesTags) {
+          return false;
+        }
+      }
 
-  // Base raw items for active tab
-  const rawItems = activeTab === 'feed' ? feedItems : filteredBookmarks;
+      // 2. Platform Filter
+      if (selectedPlatform !== 'all' && item.platform !== selectedPlatform) {
+        return false;
+      }
 
-  // Process items: Time Range Filter -> Unread Only -> Per-Source Capping
-  let displayedItems = rawItems;
+      // 3. Media Type Filter
+      if (selectedMediaType !== 'all' && item.mediaType !== selectedMediaType) {
+        return false;
+      }
 
-  // 1. Time Range Filter
-  if (timeRange !== 'all') {
-    const msMap: Record<TimeRange, number> = {
-      '24h': 24 * 3600 * 1000,
-      '3d': 3 * 24 * 3600 * 1000,
-      '7d': 7 * 24 * 3600 * 1000,
-      'all': 0,
-    };
-    const cutoff = Date.now() - msMap[timeRange];
-    displayedItems = displayedItems.filter((item) => {
-      const pubTime = new Date(item.publishedAt).getTime();
-      return !isNaN(pubTime) && pubTime >= cutoff;
+      // 4. Time Range Filter (Default: 24h)
+      if (timeRange !== 'all') {
+        const msMap: Record<TimeRange, number> = {
+          '24h': 24 * 3600 * 1000,
+          '3d': 3 * 24 * 3600 * 1000,
+          '7d': 7 * 24 * 3600 * 1000,
+          'all': 0,
+        };
+        const cutoff = Date.now() - msMap[timeRange];
+        const pubTime = new Date(item.publishedAt).getTime();
+        if (!isNaN(pubTime) && pubTime < cutoff) {
+          return false;
+        }
+      }
+
+      // 5. Unread Only Filter
+      if (unreadOnly && isRead(item.id)) {
+        return false;
+      }
+
+      return true;
     });
-  }
 
-  // 2. Unread Only Filter
-  if (unreadOnly) {
-    displayedItems = displayedItems.filter((item) => !isRead(item.id));
-  }
+    // 6. Per-Source Capping
+    if (limitPerSource > 0) {
+      const counts: Record<string, number> = {};
+      return filtered.filter((item) => {
+        counts[item.sourceId] = (counts[item.sourceId] || 0) + 1;
+        return counts[item.sourceId] <= limitPerSource;
+      });
+    }
 
-  // 3. Per-Source Limit
-  if (limitPerSource > 0) {
-    const counts: Record<string, number> = {};
-    displayedItems = displayedItems.filter((item) => {
-      counts[item.sourceId] = (counts[item.sourceId] || 0) + 1;
-      return counts[item.sourceId] <= limitPerSource;
-    });
-  }
+    return filtered;
+  }, [
+    activeTab,
+    feedItems,
+    bookmarks,
+    searchQuery,
+    selectedPlatform,
+    selectedMediaType,
+    timeRange,
+    unreadOnly,
+    limitPerSource,
+    isRead,
+  ]);
 
   const handleMarkAllVisibleAsRead = () => {
     markAllAsRead(displayedItems.map((i) => i.id));
@@ -274,10 +295,7 @@ export default function HomePage() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
               {activeTab === 'feed' ? (
-                <>
-                  <span>Unified Stream</span>
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                </>
+                <span>Unified Stream</span>
               ) : (
                 <>
                   <Bookmark className="w-4 h-4 text-violet-400 fill-violet-400/20" />
@@ -339,7 +357,7 @@ export default function HomePage() {
             setSearchQuery('');
             setSelectedPlatform('all');
             setSelectedMediaType('all');
-            setTimeRange('all');
+            setTimeRange('24h');
             setLimitPerSource(0);
             setUnreadOnly(false);
           }}
