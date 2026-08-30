@@ -14,6 +14,9 @@ import {
   Rss,
   Terminal,
   Instagram,
+  Facebook,
+  Twitter,
+  MessageCircle,
   Clock,
   Layers,
   CheckCheck,
@@ -350,6 +353,45 @@ export function FilterBar({
           >
             <Instagram className="w-3.5 h-3.5 text-pink-400" />
             Instagram
+          </button>
+          <button
+            onClick={() => {
+              setSelectedPlatform('facebook');
+            }}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+              selectedPlatform === 'facebook'
+                ? 'bg-blue-600/80 text-white'
+                : 'text-slate-400 hover:text-blue-500'
+            }`}
+          >
+            <Facebook className="w-3.5 h-3.5 text-blue-500" />
+            Facebook
+          </button>
+          <button
+            onClick={() => {
+              setSelectedPlatform('twitter');
+            }}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+              selectedPlatform === 'twitter'
+                ? 'bg-sky-500/80 text-white'
+                : 'text-slate-400 hover:text-sky-400'
+            }`}
+          >
+            <Twitter className="w-3.5 h-3.5 text-sky-400" />
+            Twitter
+          </button>
+          <button
+            onClick={() => {
+              setSelectedPlatform('reddit');
+            }}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+              selectedPlatform === 'reddit'
+                ? 'bg-orange-600/80 text-white'
+                : 'text-slate-400 hover:text-orange-500'
+            }`}
+          >
+            <MessageCircle className="w-3.5 h-3.5 text-orange-500" />
+            Reddit
           </button>
         </div>
       </div>

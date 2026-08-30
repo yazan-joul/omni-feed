@@ -6,6 +6,7 @@ export type ContentPlatform =
   | 'reddit'
   | 'twitter'
   | 'instagram'
+  | 'facebook'
   | 'linkedin'
   | 'brightdata'
   | 'custom';

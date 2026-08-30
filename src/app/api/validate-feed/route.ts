@@ -123,6 +123,21 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // --- 3.5 Handle Facebook (facebook.com/...) ---
+    if (rawInput.includes('facebook.com') || rawInput.includes('fb.me')) {
+      const match = rawInput.match(/facebook\.com\/([a-zA-Z0-9_.-]+)/i);
+      const handle = match ? match[1] : 'page';
+      const normalizedUrl = `https://www.facebook.com/${handle}`;
+
+      return NextResponse.json({
+        success: true,
+        platform: 'facebook',
+        title: `${handle} on Facebook`,
+        description: `Facebook stream for ${handle}`,
+        url: normalizedUrl,
+      });
+    }
+
     let targetUrl = rawInput;
     if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
       targetUrl = `https://${targetUrl}`;

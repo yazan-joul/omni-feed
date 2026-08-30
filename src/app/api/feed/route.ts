@@ -4,6 +4,9 @@ import { RSSAdapter } from '@/lib/adapters/rss.adapter';
 import { YouTubeAdapter } from '@/lib/adapters/youtube.adapter';
 import { BrightDataAdapter } from '@/lib/adapters/brightdata.adapter';
 import { InstagramAdapter } from '@/lib/adapters/instagram.adapter';
+import { FacebookAdapter } from '@/lib/adapters/facebook.adapter';
+import { TwitterAdapter } from '@/lib/adapters/twitter.adapter';
+import { RedditAdapter } from '@/lib/adapters/reddit.adapter';
 import { FALLBACK_FEED_ITEMS } from '@/lib/mock-data';
 import { feedCache } from '@/lib/utils/cache';
 import { FeedItem, FeedSource } from '@/lib/types';
@@ -13,6 +16,9 @@ const rssAdapter = new RSSAdapter();
 const ytAdapter = new YouTubeAdapter();
 const brightDataAdapter = new BrightDataAdapter();
 const instagramAdapter = new InstagramAdapter();
+const facebookAdapter = new FacebookAdapter();
+const twitterAdapter = new TwitterAdapter();
+const redditAdapter = new RedditAdapter();
 
 // Next.js Route Cache TTL config
 export const revalidate = 300;
@@ -91,12 +97,21 @@ export async function GET(request: NextRequest) {
       try {
         let items: FeedItem[] = [];
         const isInstagram = source.platform === 'instagram';
-        const isSocial = isInstagram || ['brightdata', 'twitter', 'reddit', 'linkedin'].includes(source.platform);
+        const isFacebook = source.platform === 'facebook';
+        const isTwitter = source.platform === 'twitter';
+        const isReddit = source.platform === 'reddit';
+        const isSocial = isInstagram || isFacebook || isTwitter || isReddit || ['brightdata', 'linkedin'].includes(source.platform);
 
         if (source.platform === 'youtube') {
           items = await ytAdapter.fetchFeed(source);
         } else if (isInstagram) {
           items = await instagramAdapter.fetchFeed(source);
+        } else if (isFacebook) {
+          items = await facebookAdapter.fetchFeed(source);
+        } else if (isTwitter) {
+          items = await twitterAdapter.fetchFeed(source);
+        } else if (isReddit) {
+          items = await redditAdapter.fetchFeed(source);
         } else if (isSocial) {
           items = await brightDataAdapter.fetchFeed(source);
         } else {
@@ -132,7 +147,11 @@ export async function GET(request: NextRequest) {
 
     // 3. CACHE MISS: Block and fetch with adaptive timeout guard (35s for Apify/Social, 7.5s for RSS)
     try {
-      const isSocial = source.platform === 'instagram' || ['brightdata', 'twitter', 'reddit', 'linkedin'].includes(source.platform);
+      const isInstagram = source.platform === 'instagram';
+      const isFacebook = source.platform === 'facebook';
+      const isTwitter = source.platform === 'twitter';
+      const isReddit = source.platform === 'reddit';
+      const isSocial = isInstagram || isFacebook || isTwitter || isReddit || ['brightdata', 'linkedin'].includes(source.platform);
       const timeoutMs = isSocial ? 35000 : 7500;
       const freshItems = await fetchWithTimeout(revalidate(), timeoutMs, source.name);
       return { items: freshItems || [], sourceName: source.name, failed: freshItems?.length === 0 };
