@@ -49,8 +49,10 @@ export class TwitterAdapter implements FeedAdapter {
 
       const data = await response.json();
       if (!Array.isArray(data)) {
-        console.warn(`[TwitterAdapter] Expected array from Apify dataset, got:`, typeof data);
-        return [];
+        throw new Error(`Invalid data from Apify.`);
+      }
+      if (data.length === 0) {
+        throw new Error(`Twitter/X blocked the scraper (0 posts returned for ${targetUrl}).`);
       }
 
       return data.slice(0, 6).map((post: any, index: number): FeedItem => {
