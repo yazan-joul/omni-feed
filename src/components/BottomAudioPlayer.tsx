@@ -117,8 +117,8 @@ export function BottomAudioPlayer({ item, isOpen, onClose }: BottomAudioPlayerPr
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 px-3 pb-3 sm:px-4 sm:pb-4">
       <div className="mx-auto max-w-7xl">
-        <div className="glass-panel relative w-full overflow-hidden rounded-2xl border border-violet-500/30 bg-slate-900/90 shadow-2xl shadow-violet-950/40 backdrop-blur-xl">
-          <div className="absolute inset-0 bg-gradient-to-r from-violet-500/10 via-slate-900/80 to-emerald-500/10" />
+        <div className="glass-panel relative w-full overflow-hidden rounded-2xl border border-cyan-500/30 bg-slate-900/90 shadow-2xl shadow-cyan-950/40 backdrop-blur-xl">
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-slate-900/80 to-emerald-500/10" />
 
           <div className="relative flex max-w-full flex-col gap-3 p-3 sm:p-4 lg:flex-row lg:items-center lg:justify-between lg:gap-5">
             <div className="flex min-w-0 items-center gap-3">
@@ -129,7 +129,7 @@ export function BottomAudioPlayer({ item, isOpen, onClose }: BottomAudioPlayerPr
                   className="h-14 w-14 shrink-0 rounded-xl object-cover border border-white/10 bg-slate-950"
                 />
               ) : (
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-violet-500/30 bg-violet-600/10 text-violet-300">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-cyan-500/30 bg-cyan-600/10 text-cyan-300">
                   <Radio className="h-6 w-6" />
                 </div>
               )}
@@ -147,7 +147,7 @@ export function BottomAudioPlayer({ item, isOpen, onClose }: BottomAudioPlayerPr
                   onClick={handleTogglePlay}
                   disabled={!item.audioUrl || hasError}
                   aria-label={isPlaying ? 'Pause podcast' : 'Play podcast'}
-                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-violet-600 text-white shadow-lg shadow-violet-600/30 transition hover:bg-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-cyan-600 text-white shadow-lg shadow-cyan-600/30 transition hover:bg-cyan-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
                 >
                   {isPlaying ? <Pause className="h-5 w-5 fill-current" /> : <Play className="ml-0.5 h-5 w-5 fill-current" />}
                 </button>
@@ -166,7 +166,7 @@ export function BottomAudioPlayer({ item, isOpen, onClose }: BottomAudioPlayerPr
                     value={Math.min(currentTime, duration || currentTime)}
                     onChange={handleRangeChange}
                     disabled={!item.audioUrl || hasError || !duration}
-                    className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-slate-700 accent-violet-500 disabled:cursor-not-allowed disabled:accent-slate-500"
+                    className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-slate-700 accent-cyan-500 disabled:cursor-not-allowed disabled:accent-slate-500"
                   />
                 </div>
               </div>
@@ -181,7 +181,7 @@ export function BottomAudioPlayer({ item, isOpen, onClose }: BottomAudioPlayerPr
 
             <div className="flex items-center justify-between gap-3 lg:w-auto lg:min-w-[180px] lg:justify-end">
               <label className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-800/80 px-2.5 py-2 text-slate-300">
-                <Volume2 className="h-4 w-4 shrink-0 text-violet-300" />
+                <Volume2 className="h-4 w-4 shrink-0 text-cyan-300" />
                 <input
                   aria-label="Adjust volume"
                   type="range"
@@ -190,7 +190,7 @@ export function BottomAudioPlayer({ item, isOpen, onClose }: BottomAudioPlayerPr
                   step={0.01}
                   value={volume}
                   onChange={(event) => setVolume(Number(event.target.value))}
-                  className="h-1.5 w-16 cursor-pointer appearance-none rounded-full bg-slate-700 accent-violet-500 sm:w-20"
+                  className="h-1.5 w-16 cursor-pointer appearance-none rounded-full bg-slate-700 accent-cyan-500 sm:w-20"
                 />
               </label>
 
@@ -198,7 +198,7 @@ export function BottomAudioPlayer({ item, isOpen, onClose }: BottomAudioPlayerPr
                 type="button"
                 onClick={onClose}
                 aria-label="Close podcast player"
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-slate-800/80 text-slate-300 transition hover:bg-slate-700 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-slate-800/80 text-slate-300 transition hover:bg-slate-700 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
               >
                 <X className="h-4 w-4" />
               </button>

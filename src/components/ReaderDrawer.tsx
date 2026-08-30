@@ -83,7 +83,7 @@ export function ReaderDrawer({
         {/* Top Control Bar */}
         <div className="p-4 px-6 border-b border-white/10 flex items-center justify-between gap-4 bg-slate-950/60">
           <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-violet-600/10 text-violet-400 border border-violet-500/20 text-xs font-semibold">
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-600/10 text-cyan-400 border border-cyan-500/20 text-xs font-semibold">
               <BookOpen className="w-3.5 h-3.5" /> Reader Mode
             </span>
           </div>
@@ -93,14 +93,14 @@ export function ReaderDrawer({
             <div className="flex items-center p-1 rounded-xl bg-slate-800 border border-white/10 text-xs text-slate-300">
               <button
                 onClick={() => setFontSize('normal')}
-                className={`px-2 py-1 rounded-md ${fontSize === 'normal' ? 'bg-violet-600 text-white font-bold' : ''}`}
+                className={`px-2 py-1 rounded-md ${fontSize === 'normal' ? 'bg-cyan-600 text-white font-bold' : ''}`}
                 title="Normal text"
               >
                 A
               </button>
               <button
                 onClick={() => setFontSize('large')}
-                className={`px-2 py-1 rounded-md ${fontSize === 'large' ? 'bg-violet-600 text-white font-bold' : ''}`}
+                className={`px-2 py-1 rounded-md ${fontSize === 'large' ? 'bg-cyan-600 text-white font-bold' : ''}`}
                 title="Large text"
               >
                 A+
@@ -113,11 +113,11 @@ export function ReaderDrawer({
               title={isBookmarked ? 'Remove Bookmark' : 'Save Bookmark'}
               className={`p-2 rounded-xl border transition-all ${
                 isBookmarked
-                  ? 'bg-violet-600/20 border-violet-500/40 text-violet-400'
+                  ? 'bg-cyan-600/20 border-cyan-500/40 text-cyan-400'
                   : 'bg-slate-800 border-white/10 text-slate-400 hover:text-white'
               }`}
             >
-              <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-violet-400' : ''}`} />
+              <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-cyan-400' : ''}`} />
             </button>
 
             {/* Share */}
@@ -162,7 +162,7 @@ export function ReaderDrawer({
           {/* Article Header */}
           <div className="space-y-3 border-b border-white/10 pb-6">
             <div className="flex items-center gap-2 text-xs text-slate-400">
-              <span className="font-semibold text-violet-400">{item.sourceName}</span>
+              <span className="font-semibold text-cyan-400">{item.sourceName}</span>
               <span>•</span>
               <span className="flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5" /> {formattedDate}
@@ -188,7 +188,7 @@ export function ReaderDrawer({
                   className="w-8 h-8 rounded-full object-cover border border-white/10"
                 />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-violet-600/20 text-violet-400 flex items-center justify-center font-bold text-xs">
+                <div className="w-8 h-8 rounded-full bg-cyan-600/20 text-cyan-400 flex items-center justify-center font-bold text-xs">
                   {item.author.name.charAt(0)}
                 </div>
               )}
@@ -224,7 +224,7 @@ export function ReaderDrawer({
               href={item.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium flex items-center justify-center gap-2 shadow-lg shadow-violet-600/20 transition-all"
+              className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-medium flex items-center justify-center gap-2 shadow-lg shadow-cyan-600/20 transition-all"
             >
               Read Full Post on {item.sourceName} <ExternalLink className="w-4 h-4" />
             </a>

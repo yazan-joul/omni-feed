@@ -115,7 +115,7 @@ export function FeedCard({
     return (
       <article
         onClick={handleCardClick}
-        className={`group glass-panel rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer hover:border-violet-500/40 hover:bg-slate-800/40 transition-all ${
+        className={`group glass-panel rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer hover:border-cyan-500/40 hover:bg-slate-800/40 transition-all ${
           isRead ? 'opacity-40 grayscale-[50%] bg-slate-900/30' : 'opacity-100'
         }`}
       >
@@ -135,7 +135,7 @@ export function FeedCard({
                   <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-transparent to-black/10" />
                 </>
               ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 via-slate-900 to-violet-500/10" />
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 via-slate-900 to-cyan-500/10" />
               )}
 
               {isVideo && (
@@ -175,7 +175,7 @@ export function FeedCard({
                     ? 'bg-red-500/10 text-red-400 border border-red-500/20'
                     : isPodcast
                     ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                    : 'bg-violet-500/10 text-violet-400 border border-violet-500/20'
+                    : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
                 }`}
               >
                 {item.platform === 'instagram' ? (
@@ -185,7 +185,7 @@ export function FeedCard({
                 ) : isPodcast ? (
                   <Headphones className="w-3 h-3 text-emerald-400" />
                 ) : (
-                  <Rss className="w-3 h-3 text-violet-400" />
+                  <Rss className="w-3 h-3 text-cyan-400" />
                 )}
                 {item.platform === 'instagram' ? 'Instagram' : isPodcast ? 'Podcast' : item.sourceName}
               </span>
@@ -206,7 +206,7 @@ export function FeedCard({
 
             {/* Title */}
             <h3 className={`font-semibold transition-colors line-clamp-1 text-sm sm:text-base ${
-              isRead ? 'text-slate-400 line-through' : 'text-slate-100 group-hover:text-violet-300'
+              isRead ? 'text-slate-400 line-through' : 'text-slate-100 group-hover:text-cyan-300'
             }`}>
               {item.title}
             </h3>
@@ -240,11 +240,11 @@ export function FeedCard({
             title={isBookmarked ? 'Remove Bookmark' : 'Bookmark'}
             className={`p-2 rounded-xl border transition-all ${
               isBookmarked
-                ? 'bg-violet-600/20 border-violet-500/40 text-violet-400'
+                ? 'bg-cyan-600/20 border-cyan-500/40 text-cyan-400'
                 : 'bg-slate-800/60 border-white/10 text-slate-400 hover:text-white'
             }`}
           >
-            <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-violet-400' : ''}`} />
+            <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-cyan-400' : ''}`} />
           </button>
           <button
             onClick={handleShare}
@@ -272,7 +272,7 @@ export function FeedCard({
   return (
     <article
       onClick={handleCardClick}
-      className={`group glass-panel rounded-2xl overflow-hidden flex flex-col cursor-pointer border border-white/10 hover:border-violet-500/50 hover:shadow-xl hover:shadow-violet-500/10 transition-all duration-300 ${
+      className={`group glass-panel rounded-2xl overflow-hidden flex flex-col cursor-pointer border border-white/10 hover:border-cyan-500/50 hover:shadow-xl hover:shadow-cyan-500/10 transition-all duration-300 ${
         isRead ? 'opacity-40 grayscale-[50%]' : 'opacity-100'
       }`}
     >
@@ -291,7 +291,7 @@ export function FeedCard({
               <div className="absolute inset-0 media-overlay pointer-events-none" />
             </>
           ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 via-slate-950 to-violet-500/10" />
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 via-slate-950 to-cyan-500/10" />
           )}
 
           {/* Video / Podcast Play Button Overlay */}
@@ -329,7 +329,7 @@ export function FeedCard({
                 item.platform === 'reddit' ? 'bg-orange-600/90 text-white shadow-md shadow-orange-600/30' :
                 isVideo ? 'bg-red-600/90 text-white shadow-md shadow-red-600/30' :
                 isPodcast ? 'bg-emerald-600/90 text-white shadow-md shadow-emerald-600/30' :
-                'bg-violet-600/90 text-white shadow-md shadow-violet-600/30'
+                'bg-cyan-600/90 text-white shadow-md shadow-cyan-600/30'
               }`}
             >
               {item.platform === 'instagram' ? <Instagram className="w-3.5 h-3.5" /> :
@@ -386,7 +386,7 @@ export function FeedCard({
                   className="w-5 h-5 rounded-full object-cover"
                 />
               ) : (
-                <div className="w-5 h-5 rounded-full bg-violet-600/20 text-violet-400 flex items-center justify-center text-[10px] font-bold">
+                <div className="w-5 h-5 rounded-full bg-cyan-600/20 text-cyan-400 flex items-center justify-center text-[10px] font-bold">
                   {item.author.name.charAt(0)}
                 </div>
               )}
@@ -404,7 +404,7 @@ export function FeedCard({
 
           {/* Title */}
           <h3 className={`font-semibold transition-colors line-clamp-2 text-base leading-snug ${
-            isRead ? 'text-slate-400 line-through' : 'text-slate-100 group-hover:text-violet-300'
+            isRead ? 'text-slate-400 line-through' : 'text-slate-100 group-hover:text-cyan-300'
           }`}>
             {item.title}
           </h3>
@@ -421,7 +421,7 @@ export function FeedCard({
         <div className="pt-2 border-t border-white/5 flex items-center justify-between">
           <button
             onClick={handleCardClick}
-            className="text-xs font-semibold text-violet-400 hover:text-violet-300 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform"
+            className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform"
           >
             {['instagram', 'facebook', 'twitter', 'reddit'].includes(item.platform) ? 'View Post' : isVideo ? 'Watch Video' : isPodcast ? 'Listen Podcast' : 'Read Article'} &rarr;
           </button>
@@ -434,7 +434,7 @@ export function FeedCard({
                 className={`p-1.5 rounded-lg border transition-all ${
                   isRead
                     ? 'bg-emerald-600/20 border-emerald-500/40 text-emerald-400'
-                    : 'bg-slate-800/60 border-white/5 text-slate-400 hover:text-white'
+                    : 'bg-slate-800/60 border-white/10 text-slate-400 hover:text-white'
                 }`}
               >
                 <CheckCircle2 className={`w-3.5 h-3.5 ${isRead ? 'fill-emerald-400/20' : ''}`} />
@@ -445,11 +445,11 @@ export function FeedCard({
               title={isBookmarked ? 'Remove Bookmark' : 'Save Bookmark'}
               className={`p-1.5 rounded-lg border transition-all ${
                 isBookmarked
-                  ? 'bg-violet-600/20 border-violet-500/40 text-violet-400'
-                  : 'bg-slate-800/60 border-white/5 text-slate-400 hover:text-white'
+                  ? 'bg-cyan-600/20 border-cyan-500/40 text-cyan-400'
+                  : 'bg-slate-800/60 border-white/10 text-slate-400 hover:text-white'
               }`}
             >
-              <Bookmark className={`w-3.5 h-3.5 ${isBookmarked ? 'fill-violet-400' : ''}`} />
+              <Bookmark className={`w-3.5 h-3.5 ${isBookmarked ? 'fill-cyan-400' : ''}`} />
             </button>
             <button
               onClick={handleShare}

@@ -31,8 +31,6 @@ interface FilterBarProps {
   setSelectedPlatform: (p: ContentPlatform | 'all') => void;
   selectedMediaType: MediaType | 'all';
   setSelectedMediaType: (m: MediaType | 'all') => void;
-  timeRange: TimeRange;
-  setTimeRange: (t: TimeRange) => void;
   limitPerSource: number;
   setLimitPerSource: (l: number) => void;
   unreadOnly: boolean;
@@ -51,8 +49,6 @@ export function FilterBar({
   setSelectedPlatform,
   selectedMediaType,
   setSelectedMediaType,
-  timeRange,
-  setTimeRange,
   limitPerSource,
   setLimitPerSource,
   unreadOnly,
@@ -132,14 +128,14 @@ export function FilterBar({
         
         {/* Search */}
         <div className="relative w-full sm:w-72 md:w-96 group">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-violet-400 transition-colors" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-cyan-400 transition-colors" />
           <input
             ref={searchInputRef}
             type="text"
             placeholder="Search feed... (Cmd+K)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-950/50 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all shadow-inner"
+            className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-950/50 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all shadow-inner"
           />
           {searchQuery && (
             <button
@@ -224,69 +220,45 @@ export function FilterBar({
             title="Refresh All"
             className="shrink-0 p-2.5 rounded-xl bg-slate-900/60 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white transition-all disabled:opacity-50"
           >
-            <RotateCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-violet-400' : ''}`} />
+            <RotateCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-cyan-400' : ''}`} />
           </button>
         </div>
       </div>
 
-      {/* 2. Middle row: Time Window, Source Limit, and Read Controls */}
+      {/* 2. Middle row: Per-Source Cap and Unread Filter */}
       <div className="flex flex-wrap items-center justify-between gap-3 pt-1 pb-1 border-t border-white/5 text-xs text-slate-300">
-        {/* Left: Time Window & Per-Source Limit */}
-        <div className="flex items-center gap-3 flex-wrap">
-          {/* Time Window Pills */}
-          <div className="flex items-center gap-1 bg-slate-900/40 p-1 rounded-xl border border-white/5">
-            <div className="flex items-center gap-1 text-slate-400 px-2 py-0.5">
-              <Clock className="w-3.5 h-3.5" />
-              <span className="font-semibold text-[11px] uppercase tracking-wider">Time:</span>
-            </div>
-            {(['all', '24h', '3d', '7d'] as TimeRange[]).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTimeRange(t)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                  timeRange === t
-                    ? 'bg-violet-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                }`}
-              >
-                {t === 'all' ? 'All Time' : t === '24h' ? 'Last 24h' : t === '3d' ? '3 Days' : 'This Week'}
-              </button>
-            ))}
+        {/* Left: Per-Source Limit Selector */}
+        <div className="flex items-center gap-1 bg-slate-900/40 p-1 rounded-xl border border-white/5">
+          <div className="flex items-center gap-1 text-slate-400 px-2 py-0.5">
+            <Layers className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="font-semibold text-[11px] uppercase tracking-wider">Cap / src:</span>
           </div>
-
-          {/* Per-Source Limit Selector */}
-          <div className="flex items-center gap-1 bg-slate-900/40 p-1 rounded-xl border border-white/5">
-            <div className="flex items-center gap-1 text-slate-400 px-2 py-0.5">
-              <Layers className="w-3.5 h-3.5" />
-              <span className="font-semibold text-[11px] uppercase tracking-wider">Cap:</span>
-            </div>
-            {[5, 10, 15, 0].map((l) => (
-              <button
-                key={l}
-                onClick={() => setLimitPerSource(l)}
-                className={`px-2 py-1 rounded-lg text-xs font-medium transition-all ${
-                  limitPerSource === l
-                    ? 'bg-violet-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                }`}
-              >
-                {l === 0 ? 'All' : `${l}/src`}
-              </button>
-            ))}
-          </div>
+          {[5, 10, 15, 0].map((l) => (
+            <button
+              key={l}
+              onClick={() => setLimitPerSource(l)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                limitPerSource === l
+                  ? 'bg-cyan-600 text-white shadow-sm shadow-cyan-600/30'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              {l === 0 ? 'All' : l}
+            </button>
+          ))}
         </div>
 
-        {/* Right: Unread Only & Mark All Read */}
+        {/* Right: Unread Only Filter */}
         <div className="flex items-center gap-2 ml-auto">
           <button
             onClick={() => setUnreadOnly(!unreadOnly)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${
               unreadOnly
-                ? 'bg-indigo-600/30 border-indigo-500/50 text-indigo-300'
+                ? 'bg-cyan-600/30 border-cyan-500/50 text-cyan-300'
                 : 'bg-slate-900/40 border-white/5 text-slate-400 hover:text-white hover:bg-slate-800/50'
             }`}
           >
-            {unreadOnly ? <EyeOff className="w-3.5 h-3.5 text-indigo-400" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
+            {unreadOnly ? <EyeOff className="w-3.5 h-3.5 text-cyan-400" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
             <span>{unreadOnly ? 'Showing Unread Only' : 'Show All'}</span>
           </button>
         </div>
@@ -306,8 +278,8 @@ export function FilterBar({
         </button>
         
         {renderPlatformButton('youtube', 'YouTube', Youtube, 'bg-red-600/80 text-white', 'text-red-500', 'hover:text-red-400')}
-        {renderPlatformButton('rss', 'RSS', Rss, 'bg-blue-600/80 text-white', 'text-blue-400', 'hover:text-blue-400')}
-        {renderPlatformButton('twitter', 'Twitter', Twitter, 'bg-sky-500/80 text-white', 'text-sky-400', 'hover:text-sky-400')}
+        {renderPlatformButton('rss', 'RSS', Rss, 'bg-cyan-600/80 text-white', 'text-cyan-400', 'hover:text-cyan-400')}
+        {renderPlatformButton('twitter', 'X / Twitter', Twitter, 'bg-sky-500/80 text-white', 'text-sky-400', 'hover:text-sky-400')}
         {renderPlatformButton('reddit', 'Reddit', MessageCircle, 'bg-orange-600/80 text-white', 'text-orange-500', 'hover:text-orange-500')}
         {renderPlatformButton('instagram', 'Instagram', Instagram, 'bg-pink-600/80 text-white', 'text-pink-400', 'hover:text-pink-400')}
         {renderPlatformButton('facebook', 'Facebook', Facebook, 'bg-blue-700/80 text-white', 'text-blue-500', 'hover:text-blue-500')}

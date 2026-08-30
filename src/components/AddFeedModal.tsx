@@ -202,7 +202,7 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources }: 
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-violet-600/20 text-violet-400 flex items-center justify-center border border-violet-500/30">
+            <div className="w-10 h-10 rounded-xl bg-cyan-600/20 text-cyan-400 flex items-center justify-center border border-cyan-500/30">
               <Plus className="w-5 h-5" />
             </div>
             <div>
@@ -219,9 +219,9 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources }: 
         </div>
 
         {/* Quick Bulk OPML Import Banner */}
-        <div className="p-3.5 rounded-2xl bg-gradient-to-r from-violet-950/40 to-slate-900 border border-violet-500/20 flex items-center justify-between gap-3">
+        <div className="p-3.5 rounded-2xl bg-gradient-to-r from-cyan-950/40 to-slate-900 border border-cyan-500/20 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-violet-600/20 text-violet-400 flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-cyan-600/20 text-cyan-400 flex items-center justify-center flex-shrink-0">
               <FileCode className="w-4 h-4" />
             </div>
             <div className="min-w-0">
@@ -241,7 +241,7 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources }: 
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={isImporting}
-            className="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold shadow-md shadow-violet-600/20 flex items-center gap-1.5 flex-shrink-0 transition-all disabled:opacity-50"
+            className="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow-md shadow-cyan-600/20 flex items-center gap-1.5 flex-shrink-0 transition-all disabled:opacity-50"
           >
             {isImporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
             <span>Upload OPML</span>
@@ -261,7 +261,7 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources }: 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-slate-300">Stream Link or Handle</label>
-              <span className="text-[11px] text-violet-400 font-medium">Auto-validated on add</span>
+              <span className="text-[11px] text-cyan-400 font-medium">Auto-validated on add</span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -276,9 +276,9 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources }: 
                   if (val.includes('youtube.com') || val.includes('youtu.be')) setPlatform('youtube');
                   else if (val.includes('x.com') || val.includes('twitter.com') || val.startsWith('@')) setPlatform('twitter');
                   else if (val.startsWith('r/') || val.includes('reddit.com')) setPlatform('reddit');
-                  else if (val.includes('instagram.com')) setPlatform('brightdata');
+                  else if (val.includes('instagram.com')) setPlatform('instagram');
                 }}
-                className="flex-1 px-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                className="flex-1 px-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
               />
               <button
                 type="button"
@@ -302,17 +302,17 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources }: 
               </button>
               <button
                 type="button"
-                onClick={() => setPresetExample('https://www.instagram.com/natgeo/', 'brightdata', 'National Geographic')}
+                onClick={() => setPresetExample('https://www.instagram.com/natgeo/', 'instagram', 'National Geographic')}
                 className="px-2 py-0.5 rounded-lg bg-pink-950/40 hover:bg-pink-900/50 border border-pink-500/30 text-pink-300 text-[10px] transition-all"
               >
                 🟣 instagram.com/natgeo
               </button>
               <button
                 type="button"
-                onClick={() => setPresetExample('@realDonaldTrump', 'twitter', 'Donald J. Trump')}
+                onClick={() => setPresetExample('@OpenAI', 'twitter', 'OpenAI')}
                 className="px-2 py-0.5 rounded-lg bg-sky-950/40 hover:bg-sky-900/50 border border-sky-500/30 text-sky-300 text-[10px] transition-all"
               >
-                ⚪ @realDonaldTrump
+                ⚪ @OpenAI
               </button>
               <button
                 type="button"
@@ -359,7 +359,7 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources }: 
               placeholder="e.g. LocalLLaMA Discussions"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
             />
           </div>
 
@@ -369,7 +369,7 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources }: 
             <select
               value={platform}
               onChange={(e) => setPlatform(e.target.value as ContentPlatform)}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
             >
               <option value="reddit">Reddit Subreddit (r/...)</option>
               <option value="twitter">X / Twitter (@...)</option>
@@ -394,7 +394,7 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources }: 
             <button
               type="submit"
               disabled={isSubmitting || !url.trim()}
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-sm font-semibold shadow-lg shadow-violet-600/30 transition-all disabled:opacity-50 flex items-center gap-2"
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white text-sm font-semibold shadow-lg shadow-cyan-600/30 transition-all disabled:opacity-50 flex items-center gap-2"
             >
               {isSubmitting ? (
                 <>

@@ -1,7 +1,6 @@
 import { decodeHtmlEntities } from '../src/lib/utils/decode';
 import { feedCache } from '../src/lib/utils/cache';
 import { RSSAdapter } from '../src/lib/adapters/rss.adapter';
-import { BrightDataAdapter } from '../src/lib/adapters/brightdata.adapter';
 import { FeedSource } from '../src/lib/types';
 import { XMLParser } from 'fast-xml-parser';
 import assert from 'assert';
@@ -86,7 +85,6 @@ const testSource: FeedSource = {
 };
 
 const rssAdapter = new RSSAdapter();
-const brightDataAdapter = new BrightDataAdapter();
 
 setTimeout(async () => {
   try {
@@ -105,90 +103,6 @@ setTimeout(async () => {
     assert.strictEqual(item.summary, 'This is a "great" episode....'); // decoded and trimmed
     
     console.log('✅ Podcast XML Normalization tests passed!');
-
-    // 4. Test Bright Data X/Twitter Normalization
-    console.log('\n➡️ [Suite 4/7] Testing Bright Data X/Twitter Post Normalization...');
-    const mockTwitterPayload = {
-      tweet_id: '1234567890',
-      text: 'Excited to announce our new model release with 128k context &amp; reasoning capabilities!',
-      user_name: 'OpenAI',
-      username: 'OpenAI',
-      user_avatar: 'https://example.com/avatar.jpg',
-      likes: 12500,
-      retweets: 3200,
-      replies: 450,
-      views: 450000,
-      url: 'https://x.com/OpenAI/status/1234567890',
-      created_at: '2026-08-30T14:00:00.000Z',
-    };
-
-    const twitterSource: FeedSource = {
-      id: 'x-openai',
-      name: 'OpenAI Updates',
-      platform: 'brightdata',
-      url: 'https://x.com/OpenAI',
-      enabled: true,
-    };
-
-    const normalizedTweet = brightDataAdapter.normalizeSocialPost(mockTwitterPayload, twitterSource);
-    assert.strictEqual(normalizedTweet.id, '1234567890');
-    assert.strictEqual(normalizedTweet.mediaType, 'post');
-    assert.strictEqual(normalizedTweet.author.name, 'OpenAI');
-    assert.strictEqual(normalizedTweet.author.handle, '@OpenAI');
-    assert.strictEqual(normalizedTweet.summary, 'Excited to announce our new model release with 128k context & reasoning capabilities!');
-    assert.strictEqual(normalizedTweet.metrics?.likes, '12.5K');
-    assert.strictEqual(normalizedTweet.metrics?.retweets, '3.2K');
-    assert.strictEqual(normalizedTweet.metrics?.views, '450K');
-    console.log('✅ Bright Data X/Twitter Normalization tests passed!');
-
-    // 5. Test Bright Data Reddit Normalization
-    console.log('\n➡️ [Suite 5/7] Testing Reddit Post Normalization...');
-    const mockRedditPayload = {
-      id: 'reddit_post_abc',
-      title: 'Comparing LLaMA 3.3 vs Mistral on Agentic Reasoning Benchmarks',
-      selftext: 'Here is a detailed breakdown of latency, memory overhead, and token efficiency.',
-      author: 'u/local_dev',
-      score: 1500,
-      num_comments: 180,
-      url: 'https://reddit.com/r/LocalLLaMA/comments/abc',
-      created_utc: 1788100000,
-      thumbnail: 'https://example.com/reddit-thumb.jpg',
-    };
-
-    const redditSource: FeedSource = {
-      id: 'reddit-localllama',
-      name: 'r/LocalLLaMA',
-      platform: 'reddit',
-      url: 'https://reddit.com/r/LocalLLaMA',
-      enabled: true,
-    };
-
-    const normalizedReddit = brightDataAdapter.normalizeSocialPost(mockRedditPayload, redditSource);
-    assert.strictEqual(normalizedReddit.mediaType, 'post');
-    assert.strictEqual(normalizedReddit.platform, 'reddit');
-    assert.strictEqual(normalizedReddit.author.name, 'u/local_dev');
-    assert.strictEqual(normalizedReddit.metrics?.likes, '1.5K');
-    assert.strictEqual(normalizedReddit.metrics?.comments, '180');
-    assert.strictEqual(normalizedReddit.tags.includes('Reddit'), true);
-    console.log('✅ Reddit Normalization tests passed!');
-
-    // 6. Test Authentic Social Media Normalization
-    console.log('\n➡️ [Suite 6/8] Testing Authentic Social Media Normalization...');
-    const rawTweet = {
-      tweet_id: '189201928374',
-      text: 'Introducing the next generation of multimodal reasoning models.',
-      user_name: 'OpenAI',
-      username: 'OpenAI',
-      likes: 14200,
-      retweets: 2800,
-      url: 'https://x.com/OpenAI/status/189201928374',
-    };
-    const normalizedTweet2 = brightDataAdapter.normalizeSocialPost(rawTweet, twitterSource);
-    assert.strictEqual(normalizedTweet2.mediaType, 'post');
-    assert.strictEqual(normalizedTweet2.title, 'Introducing the next generation of multimodal reasoning models.');
-    assert.strictEqual(normalizedTweet2.url, 'https://x.com/OpenAI/status/189201928374');
-    assert.strictEqual(normalizedTweet2.metrics?.likes, '14.2K');
-    console.log('✅ Authentic Social Media Normalization tests passed!');
 
     // 7. Test OPML XML Parsing
     console.log('\n➡️ [Suite 7/7] Testing OPML XML Bulk Extraction...');

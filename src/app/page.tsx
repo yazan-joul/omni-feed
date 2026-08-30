@@ -19,11 +19,10 @@ export default function HomePage() {
   // Navigation tabs
   const [activeTab, setActiveTab] = useState<'feed' | 'bookmarks'>('feed');
 
-  // Filters (Default to last 24 hours)
+  // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState<ContentPlatform | 'all'>('all');
   const [selectedMediaType, setSelectedMediaType] = useState<MediaType | 'all'>('all');
-  const [timeRange, setTimeRange] = useState<TimeRange>('24h');
   const [limitPerSource, setLimitPerSource] = useState<number>(0); // 0 = all
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -236,22 +235,7 @@ export default function HomePage() {
         return false;
       }
 
-      // 4. Time Range Filter (Default: 24h)
-      if (timeRange !== 'all') {
-        const msMap: Record<TimeRange, number> = {
-          '24h': 24 * 3600 * 1000,
-          '3d': 3 * 24 * 3600 * 1000,
-          '7d': 7 * 24 * 3600 * 1000,
-          'all': 0,
-        };
-        const cutoff = Date.now() - msMap[timeRange];
-        const pubTime = new Date(item.publishedAt).getTime();
-        if (!isNaN(pubTime) && pubTime < cutoff) {
-          return false;
-        }
-      }
-
-      // 5. Unread Only Filter
+      // 4. Unread Only Filter
       if (unreadOnly && isRead(item.id)) {
         return false;
       }
@@ -259,7 +243,7 @@ export default function HomePage() {
       return true;
     });
 
-    // 6. Per-Source Capping
+    // 5. Per-Source Capping
     if (limitPerSource > 0) {
       const counts: Record<string, number> = {};
       return filtered.filter((item) => {
@@ -276,7 +260,6 @@ export default function HomePage() {
     searchQuery,
     selectedPlatform,
     selectedMediaType,
-    timeRange,
     unreadOnly,
     limitPerSource,
     isRead,
@@ -289,7 +272,7 @@ export default function HomePage() {
   const hasActivePodcastPlayer = Boolean(activePodcastItem);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0b0f19] text-slate-100 selection:bg-violet-600 selection:text-white">
+    <div className="min-h-screen flex flex-col bg-[#0b0f19] text-slate-100 selection:bg-cyan-600 selection:text-white">
       {/* Top Navbar */}
       <Navbar
         activeTab={activeTab}
@@ -304,29 +287,6 @@ export default function HomePage() {
 
       {/* Main Content Area */}
       <main className={`flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6 sm:py-8 space-y-6 ${hasActivePodcastPlayer ? 'pb-36 md:pb-32' : ''}`}>
-        {/* Hero Banner / Feed Title */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-white/5">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
-              {activeTab === 'feed' ? (
-                <span>Unified Stream</span>
-              ) : (
-                <>
-                  <Bookmark className="w-4 h-4 text-violet-400 fill-violet-400/20" />
-                  <span>Bookmarks</span>
-                </>
-              )}
-            </h1>
-            <span className="text-xs text-slate-500 font-mono">
-              ({displayedItems.length} {displayedItems.length === 1 ? 'item' : 'items'})
-            </span>
-          </div>
-
-          <div className="flex items-center gap-3 text-xs text-slate-400">
-            <span>{sources.filter((s) => s.enabled).length} active streams</span>
-          </div>
-        </div>
-
         {/* Filter & Search Bar */}
         <FilterBar
           searchQuery={searchQuery}
@@ -335,8 +295,6 @@ export default function HomePage() {
           setSelectedPlatform={setSelectedPlatform}
           selectedMediaType={selectedMediaType}
           setSelectedMediaType={setSelectedMediaType}
-          timeRange={timeRange}
-          setTimeRange={setTimeRange}
           limitPerSource={limitPerSource}
           setLimitPerSource={setLimitPerSource}
           unreadOnly={unreadOnly}
@@ -371,7 +329,6 @@ export default function HomePage() {
             setSearchQuery('');
             setSelectedPlatform('all');
             setSelectedMediaType('all');
-            setTimeRange('24h');
             setLimitPerSource(0);
             setUnreadOnly(false);
           }}

@@ -2,30 +2,27 @@ import { NextRequest, NextResponse } from 'next/server';
 import { DEFAULT_FEED_SOURCES } from '@/lib/config/default-sources';
 import { RSSAdapter } from '@/lib/adapters/rss.adapter';
 import { YouTubeAdapter } from '@/lib/adapters/youtube.adapter';
-import { BrightDataAdapter } from '@/lib/adapters/brightdata.adapter';
 import { InstagramAdapter } from '@/lib/adapters/instagram.adapter';
 import { FacebookAdapter } from '@/lib/adapters/facebook.adapter';
 import { TwitterAdapter } from '@/lib/adapters/twitter.adapter';
 import { RedditAdapter } from '@/lib/adapters/reddit.adapter';
-import { FALLBACK_FEED_ITEMS } from '@/lib/mock-data';
 import { feedCache } from '@/lib/utils/cache';
 import { FeedItem, FeedSource } from '@/lib/types';
 import { after } from 'next/server';
 
 const rssAdapter = new RSSAdapter();
 const ytAdapter = new YouTubeAdapter();
-const brightDataAdapter = new BrightDataAdapter();
 const instagramAdapter = new InstagramAdapter();
 const facebookAdapter = new FacebookAdapter();
 const twitterAdapter = new TwitterAdapter();
 const redditAdapter = new RedditAdapter();
 
-// Limit social actor concurrency to max 2 concurrent runs to respect Apify plan limits
+// Limit social actor concurrency to max 3 concurrent runs to respect Apify limits
 let socialRunning = 0;
 const socialQueue: (() => void)[] = [];
 
 const acquireSocialLock = async (): Promise<void> => {
-  if (socialRunning < 2) {
+  if (socialRunning < 3) {
     socialRunning++;
     return;
   }
@@ -39,7 +36,7 @@ const acquireSocialLock = async (): Promise<void> => {
 
 const releaseSocialLock = () => {
   socialRunning = Math.max(0, socialRunning - 1);
-  if (socialQueue.length > 0 && socialRunning < 2) {
+  if (socialQueue.length > 0 && socialRunning < 3) {
     const next = socialQueue.shift();
     if (next) next();
   }
@@ -115,36 +112,37 @@ export async function GET(request: NextRequest) {
     // Check per-source cache
     const { data: cachedData, isStale } = feedCache.getWithStale<FeedItem[]>(cacheKey);
 
+    const isInstagram = source.platform === 'instagram';
+    const isFacebook = source.platform === 'facebook';
+    const isTwitter = source.platform === 'twitter';
+    const isReddit = source.platform === 'reddit';
+    const isSocial = isInstagram || isFacebook || isTwitter || isReddit;
+
     // Background fetch function to re-ingest and update cache
     const revalidate = async (): Promise<FeedItem[]> => {
-      const isInstagram = source.platform === 'instagram';
-      const isFacebook = source.platform === 'facebook';
-      const isTwitter = source.platform === 'twitter';
-      const isReddit = source.platform === 'reddit';
-      const isSocial = isInstagram || isFacebook || isTwitter || isReddit || ['brightdata', 'linkedin'].includes(source.platform);
-
       if (isSocial) {
         await acquireSocialLock();
       }
 
       try {
-        let items: FeedItem[] = [];
+        const timeoutMs = isSocial ? 50000 : 8000;
+        const fetchItems = async () => {
+          if (source.platform === 'youtube') {
+            return await ytAdapter.fetchFeed(source);
+          } else if (isInstagram) {
+            return await instagramAdapter.fetchFeed(source);
+          } else if (isFacebook) {
+            return await facebookAdapter.fetchFeed(source);
+          } else if (isTwitter) {
+            return await twitterAdapter.fetchFeed(source);
+          } else if (isReddit) {
+            return await redditAdapter.fetchFeed(source);
+          } else {
+            return await rssAdapter.fetchFeed(source);
+          }
+        };
 
-        if (source.platform === 'youtube') {
-          items = await ytAdapter.fetchFeed(source);
-        } else if (isInstagram) {
-          items = await instagramAdapter.fetchFeed(source);
-        } else if (isFacebook) {
-          items = await facebookAdapter.fetchFeed(source);
-        } else if (isTwitter) {
-          items = await twitterAdapter.fetchFeed(source);
-        } else if (isReddit) {
-          items = await redditAdapter.fetchFeed(source);
-        } else if (isSocial) {
-          items = await brightDataAdapter.fetchFeed(source);
-        } else {
-          items = await rssAdapter.fetchFeed(source);
-        }
+        const items: FeedItem[] = await fetchWithTimeout(fetchItems(), timeoutMs, source.name);
         
         if (items.length > 0) {
           // BMAD Strategy: 6 hours TTL for Apify/Social, 3 minutes for standard RSS/YouTube
@@ -154,7 +152,7 @@ export async function GET(request: NextRequest) {
         return items;
       } catch (err: any) {
         console.warn(`[Revalidate Error] Source ${source.name}:`, err.message);
-        throw err; // Re-throw to be caught by fetchWithTimeout or outer try-catch
+        throw err;
       } finally {
         if (isSocial) {
           releaseSocialLock();
@@ -162,17 +160,10 @@ export async function GET(request: NextRequest) {
       }
     };
 
-    const isInstagram = source.platform === 'instagram';
-    const isFacebook = source.platform === 'facebook';
-    const isTwitter = source.platform === 'twitter';
-    const isReddit = source.platform === 'reddit';
-    const isSocial = isInstagram || isFacebook || isTwitter || isReddit || ['brightdata', 'linkedin'].includes(source.platform);
-
     // If forceRefresh is requested, bypass cache entirely
     if (forceRefresh) {
       try {
-        const timeoutMs = isSocial ? 35000 : 7500;
-        const freshItems = await fetchWithTimeout(revalidate(), timeoutMs, source.name);
+        const freshItems = await revalidate();
         return { items: freshItems || [], sourceName: source.name, failed: freshItems?.length === 0 };
       } catch (err: any) {
         console.warn(`[Force Refresh] ${source.name}:`, err.message);
@@ -197,8 +188,7 @@ export async function GET(request: NextRequest) {
 
     // 3. CACHE MISS
     try {
-      const timeoutMs = isSocial ? 35000 : 7500;
-      const freshItems = await fetchWithTimeout(revalidate(), timeoutMs, source.name);
+      const freshItems = await revalidate();
       return { items: freshItems || [], sourceName: source.name, failed: freshItems?.length === 0 };
     } catch (err: any) {
       console.warn(`[Live Fetch] ${source.name}:`, err.message);

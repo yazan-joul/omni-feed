@@ -11,12 +11,14 @@ import {
   RotateCcw,
   Plus,
   Headphones,
-  Terminal,
+  Instagram,
+  Facebook,
+  Twitter,
+  MessageCircle,
   Upload,
   Download,
   Loader2,
   FileCode,
-  Share2,
 } from 'lucide-react';
 import { FeedSource } from '@/lib/types';
 
@@ -48,6 +50,68 @@ export function SourcesModal({
   if (!isOpen) return null;
 
   const enabledCount = sources.filter((s) => s.enabled).length;
+
+  const getSourceBadgeInfo = (source: FeedSource) => {
+    const platform = source.platform?.toLowerCase() || '';
+    const url = source.url?.toLowerCase() || '';
+    const id = source.id?.toLowerCase() || '';
+    const isPodcast = id.startsWith('pod-') || url.includes('podcast') || url.includes('syntax') || url.includes('simplecast');
+
+    if (platform === 'youtube' || url.includes('youtube.com') || url.includes('youtu.be')) {
+      return {
+        Icon: Youtube,
+        label: 'YouTube',
+        badgeClass: 'bg-red-600/20 text-red-400 border border-red-500/30',
+        iconBoxClass: 'bg-red-600/20 text-red-400 border border-red-500/20',
+      };
+    }
+    if (isPodcast) {
+      return {
+        Icon: Headphones,
+        label: 'Podcast',
+        badgeClass: 'bg-purple-600/20 text-purple-400 border border-purple-500/30',
+        iconBoxClass: 'bg-purple-600/20 text-purple-400 border border-purple-500/20',
+      };
+    }
+    if (platform === 'instagram' || url.includes('instagram.com')) {
+      return {
+        Icon: Instagram,
+        label: 'Instagram',
+        badgeClass: 'bg-pink-600/20 text-pink-400 border border-pink-500/30',
+        iconBoxClass: 'bg-pink-600/20 text-pink-400 border border-pink-500/20',
+      };
+    }
+    if (platform === 'twitter' || url.includes('twitter.com') || url.includes('x.com') || (source.name.startsWith('@') && !url.includes('instagram'))) {
+      return {
+        Icon: Twitter,
+        label: 'X (Twitter)',
+        badgeClass: 'bg-sky-500/20 text-sky-400 border border-sky-500/30',
+        iconBoxClass: 'bg-sky-500/20 text-sky-400 border border-sky-500/20',
+      };
+    }
+    if (platform === 'reddit' || url.includes('reddit.com') || source.name.startsWith('r/')) {
+      return {
+        Icon: MessageCircle,
+        label: 'Reddit',
+        badgeClass: 'bg-orange-500/20 text-orange-400 border border-orange-500/30',
+        iconBoxClass: 'bg-orange-500/20 text-orange-400 border border-orange-500/20',
+      };
+    }
+    if (platform === 'facebook' || url.includes('facebook.com')) {
+      return {
+        Icon: Facebook,
+        label: 'Facebook',
+        badgeClass: 'bg-blue-600/20 text-blue-400 border border-blue-500/30',
+        iconBoxClass: 'bg-blue-600/20 text-blue-400 border border-blue-500/20',
+      };
+    }
+    return {
+      Icon: Rss,
+      label: 'RSS Feed',
+      badgeClass: 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30',
+      iconBoxClass: 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/20',
+    };
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -94,7 +158,7 @@ export function SourcesModal({
         {/* Header */}
         <div className="p-5 sm:p-6 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-violet-600/20 text-violet-400 flex items-center justify-center border border-violet-500/30">
+            <div className="w-10 h-10 rounded-xl bg-cyan-600/20 text-cyan-400 flex items-center justify-center border border-cyan-500/30">
               <SlidersHorizontal className="w-5 h-5" />
             </div>
             <div>
@@ -118,7 +182,7 @@ export function SourcesModal({
               onClick={() => fileInputRef.current?.click()}
               disabled={isImporting}
               title="Bulk import subscriptions from OPML file"
-              className="p-2 px-3 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30 transition-all text-xs font-semibold flex items-center gap-1.5"
+              className="p-2 px-3 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/30 transition-all text-xs font-semibold flex items-center gap-1.5"
             >
               {isImporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
               <span>Import OPML</span>
@@ -154,8 +218,8 @@ export function SourcesModal({
 
         {/* Status Toast */}
         {importStatus && (
-          <div className="mx-6 mt-4 p-3 rounded-xl bg-violet-950/60 border border-violet-500/40 text-violet-200 text-xs flex items-center gap-2 animate-fadeIn">
-            <FileCode className="w-4 h-4 text-violet-400 flex-shrink-0" />
+          <div className="mx-6 mt-4 p-3 rounded-xl bg-cyan-950/60 border border-cyan-500/40 text-cyan-200 text-xs flex items-center gap-2 animate-fadeIn">
+            <FileCode className="w-4 h-4 text-cyan-400 flex-shrink-0" />
             <span>{importStatus}</span>
           </div>
         )}
@@ -168,7 +232,7 @@ export function SourcesModal({
               <div className="flex items-center justify-center gap-3">
                 <button
                   onClick={onResetSources}
-                  className="px-4 py-2 rounded-xl bg-violet-600 text-white font-medium text-xs shadow-md"
+                  className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs shadow-md shadow-cyan-600/20"
                 >
                   Restore Default Streams
                 </button>
@@ -182,9 +246,7 @@ export function SourcesModal({
             </div>
           ) : (
             sources.map((source) => {
-              const isYt = source.platform === 'youtube';
-              const isPodcast = source.id.startsWith('pod-') || source.url.includes('podcast') || source.url.includes('syntax') || source.url.includes('simplecast');
-              const isSocial = source.platform === 'brightdata' || source.platform === 'twitter' || source.platform === 'reddit' || source.platform === 'linkedin';
+              const { Icon, label, badgeClass, iconBoxClass } = getSourceBadgeInfo(source);
 
               return (
                 <div
@@ -197,25 +259,9 @@ export function SourcesModal({
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                        isYt
-                          ? 'bg-red-600/20 text-red-500'
-                          : isPodcast
-                          ? 'bg-amber-600/20 text-amber-400'
-                          : isSocial
-                          ? 'bg-sky-600/20 text-sky-400'
-                          : 'bg-violet-600/20 text-violet-400'
-                      }`}
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${iconBoxClass}`}
                     >
-                      {isYt ? (
-                        <Youtube className="w-4 h-4" />
-                      ) : isPodcast ? (
-                        <Headphones className="w-4 h-4" />
-                      ) : isSocial ? (
-                        <Share2 className="w-4 h-4" />
-                      ) : (
-                        <Rss className="w-4 h-4" />
-                      )}
+                      <Icon className="w-4 h-4" />
                     </div>
 
                     <div className="min-w-0">
@@ -224,12 +270,12 @@ export function SourcesModal({
                           {source.name}
                         </span>
                         {source.isCustom ? (
-                          <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
                             Custom
                           </span>
                         ) : (
-                          <span className="px-1.5 py-0.2 rounded text-[10px] font-medium bg-slate-800 text-slate-400">
-                            {isPodcast ? 'Podcast' : isYt ? 'YouTube' : isSocial ? 'Social' : 'Feed'}
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${badgeClass}`}>
+                            {label}
                           </span>
                         )}
                       </div>
@@ -245,7 +291,7 @@ export function SourcesModal({
                       onClick={() => onToggleSource(source.id)}
                       className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                         source.enabled
-                          ? 'bg-violet-600/20 text-violet-300 border border-violet-500/40 hover:bg-violet-600/30'
+                          ? 'bg-cyan-600/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-600/30'
                           : 'bg-slate-800 text-slate-400 hover:text-white border border-white/5'
                       }`}
                     >
@@ -274,13 +320,13 @@ export function SourcesModal({
               onClose();
               onOpenAddModal();
             }}
-            className="flex items-center gap-1.5 text-xs font-semibold text-violet-400 hover:text-violet-300 transition-colors"
+            className="flex items-center gap-1.5 text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition-colors"
           >
             <Plus className="w-4 h-4" /> Add Custom Stream
           </button>
           <button
             onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold transition-all"
+            className="px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow-md shadow-cyan-600/20 transition-all"
           >
             Done
           </button>

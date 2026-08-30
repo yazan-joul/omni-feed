@@ -6,15 +6,15 @@ export class TwitterAdapter implements FeedAdapter {
   readonly platform = 'twitter';
 
   /**
-   * Normalize an Twitter URL or handle into a search query or direct URL
+   * Normalize a Twitter / X URL or handle into a standard profile URL
    */
   private normalizeTwitterUrl(rawUrl: string): string {
     const trimmed = rawUrl.trim().replace(/^@/, '');
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-      return trimmed;
+      return trimmed.replace('twitter.com', 'x.com');
     }
     // Assume it's a username handle
-    return `https://twitter.com/${trimmed}`;
+    return `https://x.com/${trimmed}`;
   }
 
   async fetchFeed(source: FeedSource): Promise<FeedItem[]> {
@@ -27,17 +27,17 @@ export class TwitterAdapter implements FeedAdapter {
     const targetUrl = this.normalizeTwitterUrl(source.url);
 
     try {
-      // Call Apify Twitter Scraper Lite actor synchronously
+      // Call Apify X Profile Posts Scraper actor synchronously
       const response = await fetch(
-        `https://api.apify.com/v2/acts/apidojo~twitter-scraper-lite/run-sync-get-dataset-items?token=${apiToken}&timeout=45`,
+        `https://api.apify.com/v2/acts/scraper_one~x-profile-posts-scraper/run-sync-get-dataset-items?token=${apiToken}&timeout=45`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            searchTerms: [`from:${targetUrl.replace('https://twitter.com/', '').replace('https://x.com/', '')}`],
-            maxItems: 6,
+            profileUrls: [targetUrl],
+            maxPosts: 6,
           }),
         }
       );
@@ -53,42 +53,65 @@ export class TwitterAdapter implements FeedAdapter {
         return [];
       }
 
-      // Hard limit to exactly 6 posts
       return data.slice(0, 6).map((post: any, index: number): FeedItem => {
-        const rawText = post.text || post.fullText || '';
+        const rawText = post.postText || post.text || post.fullText || '';
         const cleanText = rawText.replace(/\n+/g, ' ').trim();
-        
+
         const firstLine = cleanText.split(/[.!?\n]/)[0]?.trim() || '';
-        const title = firstLine.length > 5 ? firstLine.slice(0, 95) : `Tweet by @${post.author?.userName || source.name}`;
+        const authorHandle = post.author?.screenName || post.author?.userName || source.name.replace(/^@/, '');
+        const title = firstLine.length > 5 ? firstLine.slice(0, 95) : `Tweet by @${authorHandle}`;
 
-        const isVideo = post.extendedEntities?.media?.some((m: any) => m.type === 'video') || post.entities?.media?.some((m: any) => m.type === 'video');
-        const thumbnailUrl = post.extendedEntities?.media?.[0]?.media_url_https || post.entities?.media?.[0]?.media_url_https || post.media?.[0]?.url || undefined;
+        const isVideo = Boolean(
+          post.media?.some((m: any) => m.type === 'video' || m.type === 'animated_gif') ||
+          post.extendedEntities?.media?.some((m: any) => m.type === 'video')
+        );
 
-        const postUrl = post.url || `https://twitter.com/${post.author?.userName}/status/${post.id}`;
+        const thumbnailUrl =
+          post.media?.[0]?.mediaUrlHttps ||
+          post.media?.[0]?.url ||
+          post.extendedEntities?.media?.[0]?.media_url_https ||
+          undefined;
+
+        const postUrl =
+          post.postUrl ||
+          (post.postId ? `https://x.com/${authorHandle}/status/${post.postId}` : targetUrl);
+
         const authorName = post.author?.name || source.name;
+        const authorAvatar =
+          post.author?.profileImageUrl ||
+          `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}&background=0284c7&color=fff`;
+
+        let publishedAt = new Date().toISOString();
+        if (post.timestamp) {
+          const t = typeof post.timestamp === 'number' ? post.timestamp : Number(post.timestamp);
+          if (!isNaN(t)) publishedAt = new Date(t).toISOString();
+          else if (typeof post.timestamp === 'string') publishedAt = new Date(post.timestamp).toISOString();
+        } else if (post.createdAt || post.created_at) {
+          publishedAt = new Date(post.createdAt || post.created_at).toISOString();
+        }
 
         return {
-          id: `tw-${source.id}-${post.id || index}`,
+          id: `tw-${source.id}-${post.postId || post.conversationId || post.id || index}`,
           platform: 'twitter',
           mediaType: isVideo ? 'video' : 'article',
           title: decodeHtmlEntities(title),
           url: postUrl,
           author: {
             name: decodeHtmlEntities(authorName),
-            avatarUrl: post.author?.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}&background=1DA1F2&color=fff`,
-            handle: post.author?.userName ? `@${post.author.userName}` : undefined,
+            avatarUrl: authorAvatar,
+            handle: authorHandle ? `@${authorHandle}` : undefined,
           },
-          publishedAt: post.createdAt || post.created_at || new Date().toISOString(),
+          publishedAt,
           thumbnailUrl,
           summary: cleanText ? `${decodeHtmlEntities(cleanText.slice(0, 220))}...` : undefined,
           content: decodeHtmlEntities(rawText),
           metrics: {
-            likes: post.likeCount || post.favorite_count,
-            comments: post.replyCount,
-            retweets: post.retweetCount,
-            views: post.viewCount,
+            likes: post.favouriteCount ?? post.likeCount ?? post.favorite_count ?? 0,
+            comments: post.replyCount ?? post.commentsCount ?? 0,
+            retweets: post.repostCount ?? post.retweetCount ?? 0,
+            views: post.viewCount ? Number(post.viewCount).toLocaleString() : undefined,
           },
-          tags: ['Twitter', 'X',  source.name],
+          tags: ['X (Twitter)', source.name],
           sourceName: source.name,
           sourceId: source.id,
           isCustom: source.isCustom,

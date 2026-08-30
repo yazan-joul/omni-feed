@@ -93,11 +93,11 @@ export function VideoPlayerModal({
               title={isBookmarked ? 'Remove Bookmark' : 'Save Bookmark'}
               className={`p-2 rounded-xl border transition-all ${
                 isBookmarked
-                  ? 'bg-violet-600/20 border-violet-500/40 text-violet-400'
+                  ? 'bg-cyan-600/20 border-cyan-500/40 text-cyan-400'
                   : 'bg-slate-800 border-white/10 text-slate-400 hover:text-white'
               }`}
             >
-              <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-violet-400' : ''}`} />
+              <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-cyan-400' : ''}`} />
             </button>
             <button
               onClick={handleShare}
@@ -183,7 +183,7 @@ export function VideoPlayerModal({
               </p>
               <button
                 onClick={() => setShowFullDescription(!showFullDescription)}
-                className="text-violet-400 hover:text-violet-300 font-medium flex items-center gap-1 mt-1"
+                className="text-cyan-400 hover:text-cyan-300 font-medium flex items-center gap-1 mt-1"
               >
                 {showFullDescription ? (
                   <>Show less <ChevronUp className="w-3 h-3" /></>

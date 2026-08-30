@@ -7,7 +7,6 @@ export type ContentPlatform =
   | 'instagram'
   | 'facebook'
   | 'linkedin'
-  | 'brightdata'
   | 'custom';
 
 export type MediaType = 'video' | 'article' | 'podcast' | 'post';

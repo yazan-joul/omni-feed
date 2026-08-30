@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { RSSAdapter } from '@/lib/adapters/rss.adapter';
 import { YouTubeAdapter } from '@/lib/adapters/youtube.adapter';
-import { BrightDataAdapter } from '@/lib/adapters/brightdata.adapter';
 
 const rssAdapter = new RSSAdapter();
 const ytAdapter = new YouTubeAdapter();
-const brightDataAdapter = new BrightDataAdapter();
 
 // --- Universal HTML Auto-Discovery Helper ---
 async function discoverRssFromHtml(url: string): Promise<{ discoveredUrl: string | null; isYouTube: boolean }> {
@@ -176,14 +174,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // --- 7. Bright Data Scraper / Web Page Fallback ---
+    // --- 7. Generic Web / RSS Fallback ---
     try {
       const domain = new URL(targetUrl).hostname.replace('www.', '');
       return NextResponse.json({
         success: true,
-        platform: 'brightdata',
-        title: `${domain.charAt(0).toUpperCase() + domain.slice(1)} Stream`,
-        description: `Custom web stream from ${domain}`,
+        platform: 'rss',
+        title: `${domain.charAt(0).toUpperCase() + domain.slice(1)} Feed`,
+        description: `Stream from ${domain}`,
         url: targetUrl,
       });
     } catch {

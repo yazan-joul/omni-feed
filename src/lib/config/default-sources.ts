@@ -57,7 +57,7 @@ export const DEFAULT_FEED_SOURCES: FeedSource[] = [
     enabled: true,
   },
 
-  // --- Social Media & Communities (Apify / Bright Data) ---
+  // --- Social Media & Communities (Apify) ---
   {
     id: 'social-openai-ig',
     name: 'OpenAI Instagram',
@@ -68,10 +68,10 @@ export const DEFAULT_FEED_SOURCES: FeedSource[] = [
   },
   {
     id: 'social-openai',
-    name: 'OpenAI Updates',
-    platform: 'brightdata',
+    name: 'OpenAI on X',
+    platform: 'twitter',
     url: 'https://x.com/OpenAI',
-    description: 'Official AI research, model releases, and dev updates via Bright Data.',
+    description: 'Official AI research, model releases, and dev updates on X.',
     enabled: true,
   },
   {
