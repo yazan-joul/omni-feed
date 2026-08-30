@@ -9,9 +9,6 @@ import { FacebookAdapter } from '@/lib/adapters/facebook.adapter';
 import { TwitterAdapter } from '@/lib/adapters/twitter.adapter';
 import { RedditAdapter } from '@/lib/adapters/reddit.adapter';
 
-// Optional: Security token to prevent unauthorized triggers
-// export const maxDuration = 300; // Only works on Vercel Pro, ignored on hobby
-
 const rssAdapter = new RSSAdapter();
 const ytAdapter = new YouTubeAdapter();
 const instagramAdapter = new InstagramAdapter();
@@ -35,20 +32,37 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  // Allow GET for easy manual triggering during development
   return handleIngest(request);
 }
 
 async function handleIngest(request: NextRequest) {
   const url = new URL(request.url);
   const sourceId = url.searchParams.get('sourceId');
+  const platform = url.searchParams.get('platform');
+  
+  let customSources: any[] = [];
+  try {
+    if (request.method === 'POST') {
+      const body = await request.json();
+      if (body.customSources) {
+        customSources = body.customSources;
+      }
+    }
+  } catch (e) {
+    // ignore json parse error
+  }
   
   try {
-    let targetSources = DEFAULT_FEED_SOURCES.filter(s => s.enabled);
+    let targetSources = [...DEFAULT_FEED_SOURCES, ...customSources].filter(s => s.enabled);
     
     // Allow triggering a specific source update
     if (sourceId) {
       targetSources = targetSources.filter(s => s.id === sourceId);
+    }
+    
+    // Allow triggering a specific platform update
+    if (platform && platform !== 'all' && platform !== 'All') {
+      targetSources = targetSources.filter(s => s.platform === platform);
     }
     
     const results = await Promise.allSettled(
@@ -73,7 +87,6 @@ async function handleIngest(request: NextRequest) {
     let totalIngested = 0;
     const errors: string[] = [];
     
-    // Firestore batch writes are limited to 500 ops.
     const allItems: FeedItem[] = [];
     results.forEach((res) => {
       if (res.status === 'fulfilled') {
@@ -83,13 +96,16 @@ async function handleIngest(request: NextRequest) {
       }
     });
 
-    const BATCH_LIMIT = 450; // Keep safely below 500
+    const BATCH_LIMIT = 450;
     for (let i = 0; i < allItems.length; i += BATCH_LIMIT) {
       const chunk = allItems.slice(i, i + BATCH_LIMIT);
       const batch = db.batch();
       
       chunk.forEach(item => {
-        const safeId = Buffer.from(item.id).toString('base64').replace(/[/+=]/g, '_');
+        // Ensure absolute uniqueness across all platforms by injecting the item.url into the ID if it exists
+        const uniqueString = item.url ? `${item.sourceId}-${item.url}` : item.id;
+        const safeId = Buffer.from(uniqueString).toString('base64').replace(/[/+=]/g, '_');
+        
         const docRef = db.collection('feed_items').doc(safeId);
         batch.set(docRef, item, { merge: true });
         totalIngested++;

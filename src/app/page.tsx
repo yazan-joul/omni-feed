@@ -81,24 +81,29 @@ export default function HomePage() {
 
 
   // Sync Feeds (Background Ingestion)
-  const handleSyncFeeds = async () => {
+  const handleSyncFeeds = async (platformOverride?: string) => {
     if (isSyncing) return;
     setIsSyncing(true);
     try {
-      // Trigger background ingestion layer
-      const res = await fetch('/api/cron/ingest', { method: 'POST' });
+      let url = '/api/cron/ingest';
+      if (platformOverride && platformOverride !== 'all' && platformOverride !== 'All') {
+        url += `?platform=${platformOverride}`;
+      }
+      
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customSources: sources.filter(s => s.isCustom) })
+      });
       const data = await res.json();
       
       if (data.success) {
-        // Refetch local DB to show fresh items
         await fetchFeed();
       } else {
         console.error('Ingestion failed:', data.error);
-        alert('Failed to sync feeds. Check console.');
       }
     } catch (error) {
       console.error('Network error during sync:', error);
-      alert('Network error during sync.');
     } finally {
       setIsSyncing(false);
     }
@@ -309,8 +314,7 @@ export default function HomePage() {
         onOpenSourcesModal={() => setIsSourcesModalOpen(true)}
         isDarkMode={isDarkMode}
         onToggleTheme={handleToggleTheme}
-        onSyncFeeds={handleSyncFeeds}
-        isSyncing={isSyncing}
+        
       />
 
       {/* Main Content Area */}
@@ -329,9 +333,9 @@ export default function HomePage() {
           setUnreadOnly={setUnreadOnly}
           viewMode={viewMode}
           setViewMode={setViewMode}
-          isLoading={isLoading}
-          onRefresh={fetchFeed}
-          onRefreshPlatform={handleRefreshPlatform}
+          isLoading={isLoading || isSyncing}
+          onRefresh={() => handleSyncFeeds()}
+          onRefreshPlatform={(p) => handleSyncFeeds(p)}
         />
 
         {error && (

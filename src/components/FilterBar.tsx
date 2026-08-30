@@ -109,13 +109,14 @@ export function FilterBar({
             onRefreshPlatform(platform);
           }}
           title={`Refresh ${label}`}
+          disabled={isLoading}
           className={`flex items-center px-2 py-1.5 rounded-r-lg border-l border-white/10 transition-all border border-l-0 ${
             isActive
               ? `${activeColorClass} border-transparent hover:brightness-110`
               : `bg-slate-900/50 border-white/5 text-slate-500 hover:text-slate-300 ${hoverColorClass}`
           }`}
         >
-          <RotateCw className="w-3 h-3" />
+          <RotateCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : 'opacity-60 group-hover:opacity-100'}`} />
         </button>
       </div>
     );
