@@ -13,7 +13,6 @@ OmniFeed aggregates multimedia streams—**YouTube videos, Substack newsletters,
 - ⚡ **Zero-Quota YouTube & RSS Ingestion:** Custom hybrid XML ingestion pipeline that streams full-resolution video thumbnails and metadata with zero API quota exhaustion.
 - 🎬 **Instant Embedded Video Player:** Watch YouTube videos inside a distraction-free modal without leaving the app.
 - 📖 **Distraction-Free Article Reader Mode:** Read articles with font size adjustments and clean typography.
-- 🔍 **Real-Time Universal Search & Filtering:** Filter by Category (Tech, AI, Startups, Design), Platform (YouTube, RSS, HN), or quick keyboard search (`/`).
 - ➕ **Dynamic "Add Feed" Validator:** Paste any RSS link or YouTube channel URL to instantly validate and add it to your personal feed.
 - 💾 **Local Bookmarks & Read History:** Save articles and track reading history with client persistence.
 - 🛡️ **Offline & Demo-Safe Architecture:** Built-in fallback cache guarantees the app **never crashes during live demo presentations**.
