@@ -7,7 +7,16 @@ if (!getApps().length) {
     if (!serviceAccountJson) {
       throw new Error('FIREBASE_SERVICE_ACCOUNT is not set in environment variables');
     }
-    const serviceAccount = JSON.parse(serviceAccountJson);
+    let raw = serviceAccountJson.trim();
+    if (raw.startsWith('"') && raw.endsWith('"')) {
+      try {
+        raw = JSON.parse(raw);
+      } catch {}
+    }
+    const serviceAccount = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (serviceAccount.private_key) {
+      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+    }
     
     initializeApp({
       credential: cert(serviceAccount)

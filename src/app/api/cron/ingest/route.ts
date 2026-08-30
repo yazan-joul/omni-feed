@@ -54,6 +54,7 @@ async function handleIngest(request: NextRequest) {
   
   try {
     let targetSources = [...DEFAULT_FEED_SOURCES, ...customSources].filter(s => s.enabled);
+    console.log("Target sources:", targetSources.map(s => s.id));
     
     // Allow triggering a specific source update
     if (sourceId) {

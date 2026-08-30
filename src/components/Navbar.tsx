@@ -10,7 +10,7 @@ import {
   Moon,
   Github,
   Radio,
-  RefreshCw,
+  
   Sparkles,
 } from 'lucide-react';
 
@@ -23,8 +23,7 @@ interface NavbarProps {
   onOpenSourcesModal: () => void;
   isDarkMode: boolean;
   onToggleTheme: () => void;
-  onSyncFeeds: () => void;
-  isSyncing: boolean;
+  
 }
 
 export function Navbar({
@@ -36,8 +35,7 @@ export function Navbar({
   onOpenSourcesModal,
   isDarkMode,
   onToggleTheme,
-  onSyncFeeds,
-  isSyncing,
+  
 }: NavbarProps) {
   return (
     <header className="sticky top-0 z-40 w-full glass-panel border-b border-white/10 px-3 sm:px-4 lg:px-8 py-3 transition-colors">
@@ -100,15 +98,7 @@ export function Navbar({
           </button>
 
           
-          {/* Sync Button */}
-          <button
-            onClick={onSyncFeeds}
-            disabled={isSyncing}
-            title="Fetch Latest Content"
-            className="flex items-center justify-center rounded-xl border border-white/10 bg-slate-800/60 p-2 text-slate-300 transition-all hover:bg-slate-800 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin text-cyan-400' : ''}`} />
-          </button>
+          
 
           {/* Manage Sources Button */}
           <button
