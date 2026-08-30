@@ -4,6 +4,8 @@ export type ContentPlatform =
   | 'substack'
   | 'hackernews'
   | 'reddit'
+  | 'twitter'
+  | 'linkedin'
   | 'brightdata'
   | 'custom';
 
@@ -13,12 +15,15 @@ export interface Author {
   name: string;
   avatarUrl?: string;
   channelUrl?: string;
+  handle?: string;
 }
 
 export interface EngagementMetrics {
   views?: string | number;
   likes?: string | number;
   comments?: string | number;
+  retweets?: string | number;
+  shares?: string | number;
   readTime?: string;
 }
 
@@ -38,6 +43,8 @@ export interface FeedItem {
   sourceName: string;
   sourceId: string;
   videoId?: string; // YouTube specific ID for instant embed
+  audioUrl?: string; // Podcast direct mp3 link
+  duration?: string; // Podcast duration
   isCustom?: boolean;
 }
 
@@ -54,10 +61,15 @@ export interface FeedSource {
   description?: string;
 }
 
+export type TimeRange = '24h' | '3d' | '7d' | 'all';
+
 export interface FeedFilterState {
   searchQuery: string;
   selectedPlatform: ContentPlatform | 'all';
   selectedCategory: string | 'all';
   selectedMediaType: MediaType | 'all';
+  timeRange: TimeRange;
+  limitPerSource: number; // 0 = unlimited, or 3, 5, 10, 15
+  unreadOnly: boolean;
   sortBy: 'latest' | 'popular';
 }

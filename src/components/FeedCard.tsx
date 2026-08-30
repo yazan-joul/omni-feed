@@ -12,6 +12,8 @@ import {
   Share2,
   Check,
   BookOpen,
+  CheckCircle2,
+  Headphones,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { FeedItem } from '@/lib/types';
@@ -22,6 +24,7 @@ interface FeedCardProps {
   isBookmarked: boolean;
   isRead: boolean;
   onToggleBookmark: (item: FeedItem) => void;
+  onToggleRead?: (id: string) => void;
   onOpenVideo: (item: FeedItem) => void;
   onOpenReader: (item: FeedItem) => void;
 }
@@ -32,6 +35,7 @@ export function FeedCard({
   isBookmarked,
   isRead,
   onToggleBookmark,
+  onToggleRead,
   onOpenVideo,
   onOpenReader,
 }: FeedCardProps) {
@@ -65,14 +69,20 @@ export function FeedCard({
     onToggleBookmark(item);
   };
 
+  const handleToggleRead = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onToggleRead?.(item.id);
+  };
+
   const isVideo = item.mediaType === 'video';
+  const isPodcast = item.mediaType === 'podcast';
 
   if (viewMode === 'list') {
     return (
       <article
         onClick={handleCardClick}
         className={`group glass-panel rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer hover:border-violet-500/40 hover:bg-slate-800/40 transition-all ${
-          isRead ? 'opacity-70' : 'opacity-100'
+          isRead ? 'opacity-60 bg-slate-900/30' : 'opacity-100'
         }`}
       >
         {/* Left: Thumbnail & Title */}
@@ -102,23 +112,36 @@ export function FeedCard({
                 className={`flex items-center gap-1 font-semibold px-2 py-0.5 rounded-md ${
                   isVideo
                     ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                    : isPodcast
+                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                     : 'bg-violet-500/10 text-violet-400 border border-violet-500/20'
                 }`}
               >
-                {isVideo ? <Youtube className="w-3 h-3 text-red-500" /> : <Rss className="w-3 h-3 text-violet-400" />}
+                {isVideo ? (
+                  <Youtube className="w-3 h-3 text-red-500" />
+                ) : isPodcast ? (
+                  <Headphones className="w-3 h-3 text-amber-400" />
+                ) : (
+                  <Rss className="w-3 h-3 text-violet-400" />
+                )}
                 {item.sourceName}
               </span>
               <span className="text-slate-400 flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 {formattedDate}
               </span>
+              {item.duration && (
+                <span className="text-amber-400/80 font-mono text-[11px] hidden sm:inline">{item.duration}</span>
+              )}
               {item.metrics?.readTime && (
                 <span className="text-slate-400 hidden sm:inline">{item.metrics.readTime}</span>
               )}
             </div>
 
             {/* Title */}
-            <h3 className="font-semibold text-slate-100 group-hover:text-violet-300 transition-colors line-clamp-1 text-sm sm:text-base">
+            <h3 className={`font-semibold transition-colors line-clamp-1 text-sm sm:text-base ${
+              isRead ? 'text-slate-400 line-through' : 'text-slate-100 group-hover:text-violet-300'
+            }`}>
               {item.title}
             </h3>
 
@@ -133,6 +156,19 @@ export function FeedCard({
 
         {/* Right: Actions */}
         <div className="flex items-center gap-1 self-end sm:self-center">
+          {onToggleRead && (
+            <button
+              onClick={handleToggleRead}
+              title={isRead ? 'Mark as Unread' : 'Mark as Read'}
+              className={`p-2 rounded-xl border transition-all ${
+                isRead
+                  ? 'bg-emerald-600/20 border-emerald-500/40 text-emerald-400'
+                  : 'bg-slate-800/60 border-white/10 text-slate-400 hover:text-white'
+              }`}
+            >
+              <CheckCircle2 className={`w-4 h-4 ${isRead ? 'fill-emerald-400/20' : ''}`} />
+            </button>
+          )}
           <button
             onClick={handleBookmarkClick}
             title={isBookmarked ? 'Remove Bookmark' : 'Bookmark'}
@@ -202,11 +238,19 @@ export function FeedCard({
               className={`flex items-center gap-1 font-semibold px-2.5 py-1 rounded-lg text-xs backdrop-blur-md ${
                 isVideo
                   ? 'bg-red-600/90 text-white shadow-md shadow-red-600/30'
+                  : isPodcast
+                  ? 'bg-amber-600/90 text-white shadow-md shadow-amber-600/30'
                   : 'bg-violet-600/90 text-white shadow-md shadow-violet-600/30'
               }`}
             >
-              {isVideo ? <Youtube className="w-3.5 h-3.5" /> : <BookOpen className="w-3.5 h-3.5" />}
-              {isVideo ? 'Video' : 'Article'}
+              {isVideo ? (
+                <Youtube className="w-3.5 h-3.5" />
+              ) : isPodcast ? (
+                <Headphones className="w-3.5 h-3.5" />
+              ) : (
+                <BookOpen className="w-3.5 h-3.5" />
+              )}
+              {isVideo ? 'Video' : isPodcast ? 'Podcast' : 'Article'}
             </span>
           </div>
 
@@ -222,7 +266,12 @@ export function FeedCard({
                 {item.metrics.views} views
               </span>
             )}
-            {item.metrics?.readTime && (
+            {item.duration && (
+              <span className="bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-md text-amber-300 font-mono">
+                {item.duration}
+              </span>
+            )}
+            {item.metrics?.readTime && !item.duration && (
               <span className="bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-md">
                 {item.metrics.readTime}
               </span>
@@ -261,7 +310,9 @@ export function FeedCard({
           </div>
 
           {/* Title */}
-          <h3 className="font-semibold text-slate-100 group-hover:text-violet-300 transition-colors line-clamp-2 text-base leading-snug">
+          <h3 className={`font-semibold transition-colors line-clamp-2 text-base leading-snug ${
+            isRead ? 'text-slate-400 line-through' : 'text-slate-100 group-hover:text-violet-300'
+          }`}>
             {item.title}
           </h3>
 
@@ -279,10 +330,23 @@ export function FeedCard({
             onClick={handleCardClick}
             className="text-xs font-semibold text-violet-400 hover:text-violet-300 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform"
           >
-            {isVideo ? 'Watch Video' : 'Read Article'} &rarr;
+            {isVideo ? 'Watch Video' : isPodcast ? 'Listen Episode' : 'Read Article'} &rarr;
           </button>
 
           <div className="flex items-center gap-1.5">
+            {onToggleRead && (
+              <button
+                onClick={handleToggleRead}
+                title={isRead ? 'Mark as Unread' : 'Mark as Read'}
+                className={`p-1.5 rounded-lg border transition-all ${
+                  isRead
+                    ? 'bg-emerald-600/20 border-emerald-500/40 text-emerald-400'
+                    : 'bg-slate-800/60 border-white/5 text-slate-400 hover:text-white'
+                }`}
+              >
+                <CheckCircle2 className={`w-3.5 h-3.5 ${isRead ? 'fill-emerald-400/20' : ''}`} />
+              </button>
+            )}
             <button
               onClick={handleBookmarkClick}
               title={isBookmarked ? 'Remove Bookmark' : 'Save Bookmark'}

@@ -11,10 +11,16 @@ export function useBookmarks() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem('omnifeed_bookmarks');
-      if (saved) setBookmarks(JSON.parse(saved));
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) setBookmarks(parsed);
+      }
       
       const savedRead = localStorage.getItem('omnifeed_read_ids');
-      if (savedRead) setReadIds(JSON.parse(savedRead));
+      if (savedRead) {
+        const parsedRead = JSON.parse(savedRead);
+        if (Array.isArray(parsedRead)) setReadIds(parsedRead);
+      }
     } catch {
       // Ignore storage read errors
     }
@@ -50,6 +56,37 @@ export function useBookmarks() {
     } catch {}
   };
 
+  const markAsUnread = (id: string) => {
+    const updated = readIds.filter((readId) => readId !== id);
+    setReadIds(updated);
+    try {
+      localStorage.setItem('omnifeed_read_ids', JSON.stringify(updated));
+    } catch {}
+  };
+
+  const toggleRead = (id: string) => {
+    if (readIds.includes(id)) {
+      markAsUnread(id);
+    } else {
+      markAsRead(id);
+    }
+  };
+
+  const markAllAsRead = (ids: string[]) => {
+    const combined = Array.from(new Set([...readIds, ...ids]));
+    setReadIds(combined);
+    try {
+      localStorage.setItem('omnifeed_read_ids', JSON.stringify(combined));
+    } catch {}
+  };
+
+  const clearReadHistory = () => {
+    setReadIds([]);
+    try {
+      localStorage.removeItem('omnifeed_read_ids');
+    } catch {}
+  };
+
   const isRead = (id: string): boolean => {
     return readIds.includes(id);
   };
@@ -59,7 +96,12 @@ export function useBookmarks() {
     toggleBookmark,
     isBookmarked,
     markAsRead,
+    markAsUnread,
+    toggleRead,
+    markAllAsRead,
+    clearReadHistory,
     isRead,
+    readCount: readIds.length,
     mounted,
   };
 }

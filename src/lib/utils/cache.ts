@@ -19,6 +19,15 @@ class SimpleTTLCache {
     return entry.data as T;
   }
 
+  // SWR Support: Returns data even if expired, along with a stale flag
+  getWithStale<T>(key: string): { data: T | null; isStale: boolean } {
+    const entry = this.store.get(key);
+    if (!entry) return { data: null, isStale: true };
+
+    const isExpired = Date.now() - entry.timestamp > entry.ttlMs;
+    return { data: entry.data as T, isStale: isExpired };
+  }
+
   set<T>(key: string, data: T, ttlMs = 1000 * 60 * 5): void {
     this.store.set(key, {
       data,

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { FilterBar } from '@/components/FilterBar';
 import { FeedGrid } from '@/components/FeedGrid';
@@ -10,41 +10,57 @@ import { AddFeedModal } from '@/components/AddFeedModal';
 import { SourcesModal } from '@/components/SourcesModal';
 import { useBookmarks } from '@/lib/hooks/useBookmarks';
 import { useCustomSources } from '@/lib/hooks/useCustomSources';
-import { FeedItem, ContentPlatform, MediaType } from '@/lib/types';
-import { Sparkles, Radio, Bookmark, AlertCircle, RefreshCw } from 'lucide-react';
+import { DEFAULT_FEED_SOURCES } from '@/lib/config/default-sources';
+import { FeedItem, ContentPlatform, MediaType, TimeRange } from '@/lib/types';
+import { Bookmark } from 'lucide-react';
 
 export default function HomePage() {
-  // State: Navigation tabs
+  // Navigation tabs
   const [activeTab, setActiveTab] = useState<'feed' | 'bookmarks'>('feed');
 
-  // State: Filters
+  // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedPlatform, setSelectedPlatform] = useState<ContentPlatform | 'all'>('all');
   const [selectedMediaType, setSelectedMediaType] = useState<MediaType | 'all'>('all');
+  const [timeRange, setTimeRange] = useState<TimeRange>('all');
+  const [limitPerSource, setLimitPerSource] = useState<number>(0); // 0 = all
+  const [unreadOnly, setUnreadOnly] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  // State: Modals & Drawers
+  // Modals & Drawers
   const [activeVideoItem, setActiveVideoItem] = useState<FeedItem | null>(null);
   const [activeReaderItem, setActiveReaderItem] = useState<FeedItem | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSourcesModalOpen, setIsSourcesModalOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
 
-  // State: Feed Data & Loading
+  // Feed Data & Loading
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [failedSources, setFailedSources] = useState<string[]>([]);
 
-  // Hooks: Bookmarks & Custom Sources
-  const { bookmarks, toggleBookmark, isBookmarked, markAsRead, isRead } = useBookmarks();
+  // Bookmarks & Custom Sources Hooks
+  const {
+    bookmarks,
+    toggleBookmark,
+    isBookmarked,
+    markAsRead,
+    toggleRead,
+    markAllAsRead,
+    isRead,
+  } = useBookmarks();
+
   const {
     sources,
     customOnly,
     addSource,
+    importSources,
     removeSource,
     toggleSource,
     resetToDefault,
+    mounted,
   } = useCustomSources();
 
   // Toggle Dark/Light Theme
@@ -60,10 +76,20 @@ export default function HomePage() {
     });
   };
 
+  const fetchAbortController = useRef<AbortController | null>(null);
+
   // Fetch Aggregated Feed Data
   const fetchFeed = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    setFailedSources([]);
+
+    // Cancel any in-flight request to prevent race conditions
+    if (fetchAbortController.current) {
+      fetchAbortController.current.abort();
+    }
+    const abortController = new AbortController();
+    fetchAbortController.current = abortController;
 
     try {
       const params = new URLSearchParams();
@@ -72,38 +98,58 @@ export default function HomePage() {
       if (selectedMediaType && selectedMediaType !== 'all') params.set('mediaType', selectedMediaType);
       if (searchQuery) params.set('search', searchQuery);
 
-      // Pass enabled custom sources
-      if (customOnly.length > 0) {
-        params.set('customSources', JSON.stringify(customOnly));
+      // Pass disabled or removed default source IDs
+      const activeDefaultIds = sources.filter((s) => !s.isCustom && s.enabled).map((s) => s.id);
+      const disabledOrRemovedDefaultIds = DEFAULT_FEED_SOURCES.filter(
+        (ds) => !activeDefaultIds.includes(ds.id)
+      ).map((ds) => ds.id);
+
+      if (disabledOrRemovedDefaultIds.length > 0) {
+        params.set('disabledDefaults', JSON.stringify(disabledOrRemovedDefaultIds));
       }
 
-      const res = await fetch(`/api/feed?${params.toString()}`);
+      // Pass enabled custom sources
+      if (customOnly.length > 0) {
+        params.set('customSources', JSON.stringify(customOnly.filter((s) => s.enabled)));
+      }
+
+      const res = await fetch(`/api/feed?${params.toString()}`, {
+        signal: abortController.signal
+      });
       const data = await res.json();
+
+      // Ensure this is still the most recent request
+      if (abortController.signal.aborted) return;
 
       if (data.success && Array.isArray(data.items)) {
         setFeedItems(data.items);
+        setFailedSources(data.failedSources || []);
       } else {
         setError('Unable to load feed streams.');
       }
     } catch (err: any) {
+      if (err.name === 'AbortError') return;
       console.error('Fetch error:', err);
       setError('Connection interrupted. Serving cached items.');
     } finally {
-      setIsLoading(false);
+      if (!abortController.signal.aborted) {
+        setIsLoading(false);
+      }
     }
-  }, [selectedCategory, selectedPlatform, selectedMediaType, searchQuery, customOnly]);
+  }, [selectedCategory, selectedPlatform, selectedMediaType, searchQuery, customOnly, sources]);
 
   useEffect(() => {
-    fetchFeed();
-  }, [fetchFeed]);
+    if (mounted) {
+      fetchFeed();
+    }
+  }, [fetchFeed, mounted]);
 
-  // Open Video Handler
+  // Handlers
   const handleOpenVideo = (item: FeedItem) => {
     markAsRead(item.id);
     setActiveVideoItem(item);
   };
 
-  // Open Reader Handler
   const handleOpenReader = (item: FeedItem) => {
     markAsRead(item.id);
     setActiveReaderItem(item);
@@ -125,7 +171,44 @@ export default function HomePage() {
     return matchesSearch && matchesCategory && matchesPlatform && matchesMediaType;
   });
 
-  const displayedItems = activeTab === 'feed' ? feedItems : filteredBookmarks;
+  // Base raw items for active tab
+  const rawItems = activeTab === 'feed' ? feedItems : filteredBookmarks;
+
+  // Process items: Time Range Filter -> Unread Only -> Per-Source Capping
+  let displayedItems = rawItems;
+
+  // 1. Time Range Filter
+  if (timeRange !== 'all') {
+    const msMap: Record<TimeRange, number> = {
+      '24h': 24 * 3600 * 1000,
+      '3d': 3 * 24 * 3600 * 1000,
+      '7d': 7 * 24 * 3600 * 1000,
+      'all': 0,
+    };
+    const cutoff = Date.now() - msMap[timeRange];
+    displayedItems = displayedItems.filter((item) => {
+      const pubTime = new Date(item.publishedAt).getTime();
+      return !isNaN(pubTime) && pubTime >= cutoff;
+    });
+  }
+
+  // 2. Unread Only Filter
+  if (unreadOnly) {
+    displayedItems = displayedItems.filter((item) => !isRead(item.id));
+  }
+
+  // 3. Per-Source Limit
+  if (limitPerSource > 0) {
+    const counts: Record<string, number> = {};
+    displayedItems = displayedItems.filter((item) => {
+      counts[item.sourceId] = (counts[item.sourceId] || 0) + 1;
+      return counts[item.sourceId] <= limitPerSource;
+    });
+  }
+
+  const handleMarkAllVisibleAsRead = () => {
+    markAllAsRead(displayedItems.map((i) => i.id));
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0b0f19] text-slate-100 selection:bg-violet-600 selection:text-white">
@@ -142,42 +225,30 @@ export default function HomePage() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6 sm:py-8 space-y-6">
-        {/* Hero Banner / Feed Title */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-white/5">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-5 space-y-5">
+        {/* Minimalist Subheader */}
+        <div className="flex items-center justify-between pb-1 border-b border-white/5">
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-2">
               {activeTab === 'feed' ? (
                 <>
-                  <span>Unified Multi-Stream</span>
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+                  <span>Unified Stream</span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 </>
               ) : (
                 <>
-                  <Bookmark className="w-7 h-7 text-violet-400 fill-violet-400/20" />
-                  <span>Saved Bookmarks</span>
+                  <Bookmark className="w-4 h-4 text-violet-400 fill-violet-400/20" />
+                  <span>Bookmarks</span>
                 </>
               )}
             </h1>
-            <p className="text-xs sm:text-sm text-slate-400 mt-1">
-              {activeTab === 'feed'
-                ? 'Aggregating YouTube tech creators, RSS publications, Substacks, and developer feeds in real time.'
-                : `You have saved ${bookmarks.length} articles and videos for offline reading.`}
-            </p>
+            <span className="text-xs text-slate-500 font-mono">
+              ({displayedItems.length} {displayedItems.length === 1 ? 'item' : 'items'})
+            </span>
           </div>
 
-          {/* Quick stats pills */}
-          <div className="flex items-center gap-2 self-start md:self-auto">
-            <div className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-slate-300 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-violet-400" />
-              <span>{feedItems.length} Stories Ingested</span>
-            </div>
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="px-3 py-1.5 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-xs font-semibold flex items-center gap-1 transition-all"
-            >
-              <Sparkles className="w-3.5 h-3.5" /> + Custom Stream
-            </button>
+          <div className="flex items-center gap-3 text-xs text-slate-400">
+            <span>{sources.filter((s) => s.enabled).length} active streams</span>
           </div>
         </div>
 
@@ -191,6 +262,13 @@ export default function HomePage() {
           setSelectedPlatform={setSelectedPlatform}
           selectedMediaType={selectedMediaType}
           setSelectedMediaType={setSelectedMediaType}
+          timeRange={timeRange}
+          setTimeRange={setTimeRange}
+          limitPerSource={limitPerSource}
+          setLimitPerSource={setLimitPerSource}
+          unreadOnly={unreadOnly}
+          setUnreadOnly={setUnreadOnly}
+          onMarkAllAsRead={handleMarkAllVisibleAsRead}
           viewMode={viewMode}
           setViewMode={setViewMode}
           isLoading={isLoading}
@@ -205,6 +283,7 @@ export default function HomePage() {
           isBookmarked={isBookmarked}
           isRead={isRead}
           onToggleBookmark={toggleBookmark}
+          onToggleRead={toggleRead}
           onOpenVideo={handleOpenVideo}
           onOpenReader={handleOpenReader}
           onResetFilters={() => {
@@ -212,8 +291,12 @@ export default function HomePage() {
             setSelectedCategory('All');
             setSelectedPlatform('all');
             setSelectedMediaType('all');
+            setTimeRange('all');
+            setLimitPerSource(0);
+            setUnreadOnly(false);
           }}
           onOpenAddModal={() => setIsAddModalOpen(true)}
+          failedSources={failedSources}
         />
       </main>
 
@@ -243,6 +326,10 @@ export default function HomePage() {
           addSource(source);
           fetchFeed();
         }}
+        onImportSources={(imported) => {
+          importSources(imported);
+          fetchFeed();
+        }}
       />
 
       {/* Manage Sources Modal */}
@@ -263,11 +350,15 @@ export default function HomePage() {
           fetchFeed();
         }}
         onOpenAddModal={() => setIsAddModalOpen(true)}
+        onImportSources={(imported) => {
+          importSources(imported);
+          fetchFeed();
+        }}
       />
 
-      {/* Footer */}
-      <footer className="w-full border-t border-white/5 py-6 px-4 text-center text-xs text-slate-500">
-        <p>OmniFeed • Spec-Driven AI Hackathon Project • Built with Antigravity, Next.js 15, BMAD & Superpowers</p>
+      {/* Minimal Footer */}
+      <footer className="w-full border-t border-white/5 py-4 px-4 text-center text-[11px] text-slate-500">
+        <p>OmniFeed • Unified Stream Aggregator</p>
       </footer>
     </div>
   );

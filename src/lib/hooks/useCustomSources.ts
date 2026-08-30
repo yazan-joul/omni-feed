@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { FeedSource } from '../types';
 import { DEFAULT_FEED_SOURCES } from '../config/default-sources';
 
@@ -12,7 +12,10 @@ export function useCustomSources() {
     try {
       const savedSources = localStorage.getItem('omnifeed_sources');
       if (savedSources) {
-        setSources(JSON.parse(savedSources));
+        const parsed = JSON.parse(savedSources);
+        if (Array.isArray(parsed)) {
+          setSources(parsed);
+        }
       }
     } catch {}
     setMounted(true);
@@ -44,12 +47,21 @@ export function useCustomSources() {
     saveSources(DEFAULT_FEED_SOURCES);
   };
 
-  const customOnly = sources.filter((s) => s.isCustom);
+  const importSources = (newSources: FeedSource[]): number => {
+    const existingUrls = new Set(sources.map((s) => s.url.toLowerCase().trim()));
+    const toAdd = newSources.filter((s) => !existingUrls.has(s.url.toLowerCase().trim()));
+    const updated = [...toAdd, ...sources];
+    saveSources(updated);
+    return toAdd.length;
+  };
+
+  const customOnly = useMemo(() => sources.filter((s) => s.isCustom), [sources]);
 
   return {
     sources,
     customOnly,
     addSource,
+    importSources,
     removeSource,
     toggleSource,
     resetToDefault,

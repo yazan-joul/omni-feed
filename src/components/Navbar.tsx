@@ -38,24 +38,13 @@ export function Navbar({
     <header className="sticky top-0 z-40 w-full glass-panel border-b border-white/10 px-4 lg:px-8 py-3.5 transition-colors">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
         {/* Left: Brand / Logo */}
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab('feed')}>
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 via-purple-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/25">
-            <Rss className="w-5 h-5 text-white" />
+        <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => setActiveTab('feed')}>
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 via-purple-600 to-indigo-600 flex items-center justify-center shadow-md shadow-violet-500/25">
+            <Rss className="w-4 h-4 text-white" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-xl tracking-tight bg-gradient-to-r from-violet-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent">
-                OmniFeed
-              </span>
-              <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">
-                v1.0
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs text-slate-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>{sourcesCount} Live Streams</span>
-            </div>
-          </div>
+          <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-violet-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent">
+            OmniFeed
+          </span>
         </div>
 
         {/* Center: Main Navigation Tabs */}

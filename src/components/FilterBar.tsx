@@ -12,10 +12,15 @@ import {
   Youtube,
   Rss,
   Terminal,
-  Sparkles,
+  Headphones,
+  Clock,
+  Layers,
+  CheckCheck,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { CATEGORIES } from '@/lib/config/default-sources';
-import { ContentPlatform, MediaType } from '@/lib/types';
+import { ContentPlatform, MediaType, TimeRange } from '@/lib/types';
 
 interface FilterBarProps {
   searchQuery: string;
@@ -26,6 +31,13 @@ interface FilterBarProps {
   setSelectedPlatform: (p: ContentPlatform | 'all') => void;
   selectedMediaType: MediaType | 'all';
   setSelectedMediaType: (m: MediaType | 'all') => void;
+  timeRange: TimeRange;
+  setTimeRange: (t: TimeRange) => void;
+  limitPerSource: number;
+  setLimitPerSource: (l: number) => void;
+  unreadOnly: boolean;
+  setUnreadOnly: (u: boolean) => void;
+  onMarkAllAsRead?: () => void;
   viewMode: 'grid' | 'list';
   setViewMode: (v: 'grid' | 'list') => void;
   isLoading: boolean;
@@ -41,6 +53,13 @@ export function FilterBar({
   setSelectedPlatform,
   selectedMediaType,
   setSelectedMediaType,
+  timeRange,
+  setTimeRange,
+  limitPerSource,
+  setLimitPerSource,
+  unreadOnly,
+  setUnreadOnly,
+  onMarkAllAsRead,
   viewMode,
   setViewMode,
   isLoading,
@@ -61,8 +80,8 @@ export function FilterBar({
   }, []);
 
   return (
-    <div className="w-full space-y-4 mb-6">
-      {/* Top row: Search Bar, Media Switcher, View Switcher & Refresh */}
+    <div className="w-full space-y-3.5 mb-6">
+      {/* 1. Top row: Search Bar, Media Type Switcher, View Mode & Refresh */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         {/* Search input */}
         <div className="relative flex-1">
@@ -70,7 +89,7 @@ export function FilterBar({
           <input
             ref={searchInputRef}
             type="text"
-            placeholder="Search across videos, articles, tags, authors... (Press '/' to focus)"
+            placeholder="Search feed, authors, tags... (Press '/' to focus)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-900/60 border border-white/10 text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 transition-all"
@@ -86,7 +105,7 @@ export function FilterBar({
         </div>
 
         {/* Media Type & View Mode Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           {/* Media Type Filter */}
           <div className="flex items-center p-1 rounded-xl bg-slate-900/60 border border-white/10 text-xs">
             <button
@@ -95,7 +114,7 @@ export function FilterBar({
                 selectedMediaType === 'all' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'
               }`}
             >
-              All Types
+              All
             </button>
             <button
               onClick={() => setSelectedMediaType('video')}
@@ -105,6 +124,15 @@ export function FilterBar({
             >
               <Video className="w-3.5 h-3.5" />
               Videos
+            </button>
+            <button
+              onClick={() => setSelectedMediaType('podcast')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all ${
+                selectedMediaType === 'podcast' ? 'bg-amber-600 text-white' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Headphones className="w-3.5 h-3.5" />
+              Podcasts
             </button>
             <button
               onClick={() => setSelectedMediaType('article')}
@@ -151,7 +179,81 @@ export function FilterBar({
         </div>
       </div>
 
-      {/* Bottom row: Category & Platform Pills */}
+      {/* 2. Middle row: Time Window, Source Limit, and Read Controls */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-1 pb-1 border-t border-white/5 text-xs text-slate-300">
+        {/* Left: Time Window & Per-Source Limit */}
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Time Window Pills */}
+          <div className="flex items-center gap-1 bg-slate-900/40 p-1 rounded-xl border border-white/5">
+            <div className="flex items-center gap-1 text-slate-400 px-2 py-0.5">
+              <Clock className="w-3.5 h-3.5" />
+              <span className="font-semibold text-[11px] uppercase tracking-wider">Time:</span>
+            </div>
+            {(['all', '24h', '3d', '7d'] as TimeRange[]).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTimeRange(t)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                  timeRange === t
+                    ? 'bg-violet-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                {t === 'all' ? 'All Time' : t === '24h' ? 'Last 24h' : t === '3d' ? '3 Days' : 'This Week'}
+              </button>
+            ))}
+          </div>
+
+          {/* Per-Source Limit Selector */}
+          <div className="flex items-center gap-1 bg-slate-900/40 p-1 rounded-xl border border-white/5">
+            <div className="flex items-center gap-1 text-slate-400 px-2 py-0.5">
+              <Layers className="w-3.5 h-3.5" />
+              <span className="font-semibold text-[11px] uppercase tracking-wider">Cap:</span>
+            </div>
+            {[5, 10, 15, 0].map((l) => (
+              <button
+                key={l}
+                onClick={() => setLimitPerSource(l)}
+                className={`px-2 py-1 rounded-lg text-xs font-medium transition-all ${
+                  limitPerSource === l
+                    ? 'bg-violet-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                {l === 0 ? 'All' : `${l}/src`}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Right: Unread Only & Mark All Read */}
+        <div className="flex items-center gap-2 ml-auto">
+          <button
+            onClick={() => setUnreadOnly(!unreadOnly)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${
+              unreadOnly
+                ? 'bg-indigo-600/30 border-indigo-500/50 text-indigo-300'
+                : 'bg-slate-900/40 border-white/5 text-slate-400 hover:text-white hover:bg-slate-800/50'
+            }`}
+          >
+            {unreadOnly ? <EyeOff className="w-3.5 h-3.5 text-indigo-400" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
+            <span>{unreadOnly ? 'Showing Unread Only' : 'Show All (Read & Unread)'}</span>
+          </button>
+
+          {onMarkAllAsRead && (
+            <button
+              onClick={onMarkAllAsRead}
+              title="Mark all visible items as read"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/40 hover:bg-slate-800/60 border border-white/5 text-slate-400 hover:text-emerald-400 transition-all text-xs font-medium"
+            >
+              <CheckCheck className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Mark All Read</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 3. Bottom row: Category & Platform Pills */}
       <div className="flex items-center justify-between gap-4 overflow-x-auto pb-1 scrollbar-none">
         {/* Categories */}
         <div className="flex items-center gap-1.5 flex-nowrap">
@@ -180,10 +282,15 @@ export function FilterBar({
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            All Sources
+            All Platforms
           </button>
           <button
-            onClick={() => setSelectedPlatform('youtube')}
+            onClick={() => {
+              setSelectedPlatform('youtube');
+              if (selectedMediaType === 'article' || selectedMediaType === 'podcast') {
+                setSelectedMediaType('all');
+              }
+            }}
             className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
               selectedPlatform === 'youtube'
                 ? 'bg-red-600/80 text-white'
@@ -194,7 +301,12 @@ export function FilterBar({
             YouTube
           </button>
           <button
-            onClick={() => setSelectedPlatform('hackernews')}
+            onClick={() => {
+              setSelectedPlatform('hackernews');
+              if (selectedMediaType === 'video' || selectedMediaType === 'podcast') {
+                setSelectedMediaType('all');
+              }
+            }}
             className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
               selectedPlatform === 'hackernews'
                 ? 'bg-amber-600/80 text-white'
@@ -205,7 +317,12 @@ export function FilterBar({
             Hacker News
           </button>
           <button
-            onClick={() => setSelectedPlatform('rss')}
+            onClick={() => {
+              setSelectedPlatform('rss');
+              if (selectedMediaType === 'video') {
+                setSelectedMediaType('all');
+              }
+            }}
             className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
               selectedPlatform === 'rss'
                 ? 'bg-blue-600/80 text-white'
