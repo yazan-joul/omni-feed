@@ -99,6 +99,9 @@ export default function HomePage() {
       
       if (data.success) {
         await fetchFeed();
+        if (data.errors && data.errors.length > 0) {
+          alert("Partial Sync: Some sources failed to fetch (e.g., blocked by Twitter/IG).\n\nDetails: " + data.errors[0]);
+        }
       } else {
         console.error('Ingestion failed:', data.error);
       }
