@@ -6,11 +6,8 @@ import {
   Bookmark,
   Plus,
   SlidersHorizontal,
-  Sun,
-  Moon,
   Github,
   Radio,
-  
   Sparkles,
 } from 'lucide-react';
 
@@ -21,9 +18,8 @@ interface NavbarProps {
   sourcesCount: number;
   onOpenAddModal: () => void;
   onOpenSourcesModal: () => void;
-  isDarkMode: boolean;
-  onToggleTheme: () => void;
-  
+  isDarkMode?: boolean;
+  onToggleTheme?: () => void;
 }
 
 export function Navbar({
@@ -35,7 +31,6 @@ export function Navbar({
   onOpenSourcesModal,
   isDarkMode,
   onToggleTheme,
-  
 }: NavbarProps) {
   return (
     <header className="sticky top-0 z-40 w-full glass-panel border-b border-white/10 px-3 sm:px-4 lg:px-8 py-3 transition-colors">
@@ -107,15 +102,6 @@ export function Navbar({
             className="rounded-xl border border-white/10 bg-slate-800/60 p-2 text-slate-300 transition-all hover:bg-slate-800 hover:text-white"
           >
             <SlidersHorizontal className="h-4 w-4" />
-          </button>
-
-          {/* Theme Switcher */}
-          <button
-            onClick={onToggleTheme}
-            title="Toggle theme"
-            className="rounded-xl border border-white/10 bg-slate-800/60 p-2 text-slate-300 transition-all hover:bg-slate-800 hover:text-white"
-          >
-            {isDarkMode ? <Sun className="h-4 w-4 text-amber-300" /> : <Moon className="h-4 w-4 text-slate-300" />}
           </button>
         </div>
       </div>

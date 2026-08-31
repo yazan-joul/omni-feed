@@ -9,6 +9,12 @@ export class RedditAdapter implements FeedAdapter {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     },
+    customFields: {
+      item: [
+        ['media:thumbnail', 'mediaThumbnail'],
+        ['media:content', 'mediaContent'],
+      ],
+    },
   });
 
   /**
@@ -40,11 +46,18 @@ export class RedditAdapter implements FeedAdapter {
         return parsedFeed.items.slice(0, 15).map((item, index): FeedItem => {
           const rawContent = item.content || (item as any)['content:encoded'] || item.contentSnippet || '';
           
-          // Extract thumbnail from HTML content if present
+          // Extract thumbnail from HTML content if present, or from media:thumbnail
           let thumbnailUrl: string | undefined = undefined;
-          const imgMatch = rawContent.match(/<img[^>]+src=["']([^"']+)["']/i);
-          if (imgMatch && imgMatch[1] && imgMatch[1].startsWith('http')) {
-            thumbnailUrl = imgMatch[1];
+          
+          if ((item as any).mediaThumbnail?.$?.url) {
+            thumbnailUrl = (item as any).mediaThumbnail.$.url;
+          } else if ((item as any).mediaContent?.$?.url) {
+            thumbnailUrl = (item as any).mediaContent.$.url;
+          } else {
+            const imgMatch = rawContent.match(/<img[^>]+src=["']([^"']+)["']/i);
+            if (imgMatch && imgMatch[1] && imgMatch[1].startsWith('http')) {
+              thumbnailUrl = imgMatch[1];
+            }
           }
 
           // Clean plain text summary

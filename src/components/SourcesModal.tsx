@@ -158,21 +158,23 @@ export function SourcesModal({
       {/* Modal */}
       <div className="relative w-full max-w-2xl max-h-[85vh] glass-panel bg-slate-900 rounded-3xl border border-white/10 shadow-2xl z-10 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="p-5 sm:p-6 border-b border-white/10 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-cyan-600/20 text-cyan-400 flex items-center justify-center border border-cyan-500/30">
-              <SlidersHorizontal className="w-5 h-5" />
+        <div className="p-4 sm:p-6 border-b border-white/10 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-cyan-600/20 text-cyan-400 flex items-center justify-center border border-cyan-500/30 shrink-0">
+              <SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-slate-100">Manage Feed Streams</h2>
-              <p className="text-xs text-slate-400">
+            <div className="min-w-0">
+              <h2 className="text-sm sm:text-lg font-bold text-slate-100 truncate">
+                Manage Feed Streams
+              </h2>
+              <p className="text-[11px] sm:text-xs text-slate-400 truncate">
                 {enabledCount} of {sources.length} streams active
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Massive OPML Import Button */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Massive OPML Import Button (Desktop) */}
             <input
               ref={fileInputRef}
               type="file"
@@ -184,20 +186,20 @@ export function SourcesModal({
               onClick={() => fileInputRef.current?.click()}
               disabled={isImporting}
               title="Bulk import subscriptions from OPML file"
-              className="p-2 px-3 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/30 transition-all text-xs font-semibold flex items-center gap-1.5"
+              className="hidden sm:flex p-2 px-3 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/30 transition-all text-xs font-semibold items-center gap-1.5"
             >
               {isImporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
               <span>Import OPML</span>
             </button>
 
-            {/* OPML Export */}
+            {/* OPML Export (Desktop) */}
             <button
               onClick={handleExportOPML}
               title="Export subscriptions to OPML file"
-              className="p-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/5 transition-all text-xs flex items-center gap-1.5"
+              className="hidden sm:flex p-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/5 transition-all text-xs items-center gap-1.5"
             >
               <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Export</span>
+              <span>Export</span>
             </button>
 
             {/* Reset */}
@@ -216,6 +218,25 @@ export function SourcesModal({
               <X className="w-4 h-4" />
             </button>
           </div>
+        </div>
+
+        {/* Mobile Action Bar (Import / Export OPML) */}
+        <div className="flex sm:hidden items-center justify-between gap-2 px-4 py-2.5 bg-slate-950/60 border-b border-white/5 text-xs">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isImporting}
+            className="flex-1 py-2 px-3 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/30 transition-all font-semibold flex items-center justify-center gap-1.5"
+          >
+            {isImporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+            <span>Import OPML</span>
+          </button>
+          <button
+            onClick={handleExportOPML}
+            className="flex-1 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/5 transition-all flex items-center justify-center gap-1.5"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export OPML</span>
+          </button>
         </div>
 
         {/* Status Toast */}

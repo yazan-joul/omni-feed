@@ -157,9 +157,11 @@ export async function GET(request: NextRequest) {
     let hasMoreInDb = true;
 
     while (validItems.length < TARGET_ITEMS && loops < MAX_LOOPS && hasMoreInDb) {
-      let query = db.collection('feed_items')
-        .orderBy('publishedAt', 'desc')
-        .limit(50);
+      let query = db.collection('feed_items') as any;
+      if (platform && platform !== 'all' && platform !== 'All') {
+        query = query.where('platform', '==', platform.toLowerCase());
+      }
+      query = query.orderBy('publishedAt', 'desc').limit(50);
         
       if (currentCursor) {
         query = query.startAfter(currentCursor);

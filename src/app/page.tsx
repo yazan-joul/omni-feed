@@ -21,6 +21,13 @@ export default function HomePage() {
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const [selectedPlatform, setSelectedPlatform] = useState<ContentPlatform | 'all'>('all');
   const [selectedMediaType, setSelectedMediaType] = useState<MediaType | 'all'>('all');
   const [limitPerSource, setLimitPerSource] = useState<number>(0); // 0 = all
@@ -33,7 +40,6 @@ export default function HomePage() {
   const [activePodcastItem, setActivePodcastItem] = useState<FeedItem | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSourcesModalOpen, setIsSourcesModalOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(true);
 
   // Feed Data & Loading
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
@@ -67,19 +73,6 @@ export default function HomePage() {
     resetToDefault,
     mounted,
   } = useCustomSources();
-
-  // Toggle Dark/Light Theme
-  const handleToggleTheme = () => {
-    setIsDarkMode((prev) => {
-      const next = !prev;
-      if (next) {
-        document.documentElement.classList.remove('light');
-      } else {
-        document.documentElement.classList.add('light');
-      }
-      return next;
-    });
-  };
 
   const fetchAbortController = useRef<AbortController | null>(null);
 
@@ -131,7 +124,8 @@ export default function HomePage() {
       setIsLoading(true);
       cursorRef.current = null;
       setHasMore(true);
-      setFeedItems([]); // clear items on hard refresh
+      // We no longer clear setFeedItems([]) here to prevent UI flickering. 
+      // The items will be replaced once the API request completes.
     }
     
     setError(null);
@@ -160,6 +154,16 @@ export default function HomePage() {
       // Pass enabled custom sources
       if (customOnly.length > 0) {
         params.set('customSources', JSON.stringify(customOnly.filter((s) => s.enabled)));
+      }
+      
+      if (selectedPlatform !== 'all') {
+        params.set('platform', selectedPlatform);
+      }
+      if (selectedMediaType !== 'all') {
+        params.set('mediaType', selectedMediaType);
+      }
+      if (debouncedSearch) {
+        params.set('search', debouncedSearch);
       }
       
       if (isLoadMore && cursorRef.current) {
@@ -221,7 +225,7 @@ export default function HomePage() {
         setIsLoadingMore(false);
       }
     }
-  }, [customOnly, sources]);
+  }, [customOnly, sources, selectedPlatform, selectedMediaType, debouncedSearch]);
 
   useEffect(() => {
     if (mounted) {
@@ -344,9 +348,6 @@ export default function HomePage() {
         sourcesCount={sources.filter((s) => s.enabled).length}
         onOpenAddModal={() => setIsAddModalOpen(true)}
         onOpenSourcesModal={() => setIsSourcesModalOpen(true)}
-        isDarkMode={isDarkMode}
-        onToggleTheme={handleToggleTheme}
-        
       />
 
       {/* Main Content Area */}
