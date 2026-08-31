@@ -1,29 +1,6 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 
-function parseServiceAccount(rawInput: string) {
-  let raw = rawInput.trim();
-  for (let i = 0; i < 3; i++) {
-    if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))) {
-      try {
-        const parsed = JSON.parse(raw);
-        if (typeof parsed === 'string') {
-          raw = parsed.trim();
-        } else {
-          return parsed;
-        }
-      } catch {
-        raw = raw.replace(/^["']+|["']+$/g, '').trim();
-      }
-    }
-  }
-  const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-  if (parsed && typeof parsed === 'object' && parsed.private_key) {
-    parsed.private_key = parsed.private_key.replace(/\\n/g, '\n');
-  }
-  return parsed;
-}
-
 function initFirebase() {
   if (!getApps().length) {
     const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
@@ -32,7 +9,37 @@ function initFirebase() {
       return null;
     }
     try {
-      const serviceAccount = parseServiceAccount(serviceAccountJson);
+      let raw = serviceAccountJson.trim();
+      
+      // Unwrap outer quotes if passed as a quoted string
+      if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))) {
+        raw = raw.slice(1, -1).trim();
+      }
+
+      // If it contains escaped quotes like {\"type\":...}, unescape them
+      if (raw.includes('\\"')) {
+        raw = raw.replace(/\\"/g, '"');
+      }
+
+      let serviceAccount: any;
+      try {
+        serviceAccount = JSON.parse(raw);
+      } catch (firstErr) {
+        try {
+          // If still a string after JSON.parse
+          serviceAccount = JSON.parse(JSON.parse(raw));
+        } catch {
+          throw firstErr;
+        }
+      }
+
+      if (typeof serviceAccount === 'string') {
+        serviceAccount = JSON.parse(serviceAccount);
+      }
+
+      if (serviceAccount && serviceAccount.private_key) {
+        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+      }
       
       const app = initializeApp({
         credential: cert(serviceAccount)
@@ -40,7 +47,7 @@ function initFirebase() {
       console.log('[Firebase Admin] Initialized successfully');
       return app;
     } catch (error) {
-      console.error('[Firebase Admin] Initialization error', error);
+      console.error('[Firebase Admin] Initialization error:', error);
       return null;
     }
   }

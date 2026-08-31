@@ -2,10 +2,13 @@ import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
-function cleanEnv(value?: string): string | undefined {
-  if (!value) return undefined;
-  const cleaned = value.trim().replace(/^["']+|["']+$/g, '').trim();
-  return cleaned.length > 0 ? cleaned : undefined;
+function cleanEnv(val?: string): string | undefined {
+  if (!val) return undefined;
+  let clean = val.trim();
+  if ((clean.startsWith('"') && clean.endsWith('"')) || (clean.startsWith("'") && clean.endsWith("'"))) {
+    clean = clean.slice(1, -1).trim();
+  }
+  return clean || undefined;
 }
 
 const firebaseConfig = {
