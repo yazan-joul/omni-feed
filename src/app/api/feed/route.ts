@@ -13,14 +13,26 @@ let isRefreshing = false;
 const CACHE_TTL = 3 * 60 * 1000; // 3 minutes
 const CACHE_SIZE = parseInt(process.env.FEED_CACHE_SIZE || '500', 10); // Configurable cache size
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number = 4000): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`Firestore request timed out after ${timeoutMs}ms`)), timeoutMs)
+    ),
+  ]);
+}
+
 async function refreshCache() {
   if (isRefreshing) return;
   isRefreshing = true;
   try {
-    const snapshot = await db.collection('feed_items')
-      .orderBy('publishedAt', 'desc')
-      .limit(CACHE_SIZE)
-      .get();
+    const snapshot = await withTimeout(
+      db.collection('feed_items')
+        .orderBy('publishedAt', 'desc')
+        .limit(CACHE_SIZE)
+        .get(),
+      5000
+    );
 
     const items: FeedItem[] = [];
     snapshot.forEach((doc) => {
@@ -117,12 +129,15 @@ export async function GET(request: NextRequest) {
           try {
             let addedNewItems = false;
             for (const missingId of missingCustomIds) {
-              const snap = await db.collection('feed_items')
-                .where('sourceId', '==', missingId)
-                .orderBy('publishedAt', 'desc')
-                .limit(parseInt(process.env.FEED_CUSTOM_FETCH_LIMIT || '10', 10))
-                .get();
-              snap.forEach(doc => {
+              const snap = await withTimeout<any>(
+                db.collection('feed_items')
+                  .where('sourceId', '==', missingId)
+                  .orderBy('publishedAt', 'desc')
+                  .limit(parseInt(process.env.FEED_CUSTOM_FETCH_LIMIT || '10', 10))
+                  .get(),
+                3000
+              );
+              snap.forEach((doc: any) => {
                 globalFeedCache!.push({ id: doc.id, ...doc.data() } as FeedItem);
                 addedNewItems = true;
               });
@@ -187,7 +202,7 @@ export async function GET(request: NextRequest) {
         query = query.startAfter(currentCursor);
       }
 
-      const snapshot = await query.get();
+      const snapshot = await withTimeout<any>(query.get(), 4000);
       
       if (snapshot.empty) {
         hasMoreInDb = false;
