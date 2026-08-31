@@ -114,6 +114,7 @@ export async function GET(request: NextRequest) {
         // If any custom sources have no items in cache, fetch them directly from Firestore
         if (missingCustomIds.length > 0) {
           try {
+            let addedNewItems = false;
             for (const missingId of missingCustomIds) {
               const snap = await db.collection('feed_items')
                 .where('sourceId', '==', missingId)
@@ -121,8 +122,12 @@ export async function GET(request: NextRequest) {
                 .limit(10)
                 .get();
               snap.forEach(doc => {
-                globalFeedCache!.unshift({ id: doc.id, ...doc.data() } as FeedItem);
+                globalFeedCache!.push({ id: doc.id, ...doc.data() } as FeedItem);
+                addedNewItems = true;
               });
+            }
+            if (addedNewItems) {
+              globalFeedCache!.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
             }
           } catch (e) {
             console.warn('[Feed] Failed to fetch missing custom source items:', e);
@@ -147,17 +152,19 @@ export async function GET(request: NextRequest) {
           if (validItems.length >= TARGET_ITEMS) break; 
         }
 
-        // The cursor for the next fetch is just the timestamp of the last item we pulled from cache
         const nextCursor = validItems.length > 0 ? validItems[validItems.length - 1].publishedAt : null;
 
-        return NextResponse.json({
-          success: true,
-          count: validItems.length,
-          items: validItems,
-          nextCursor,
-          sourcesCount: activeSourceIds.size,
-          failedSources: [],
-        });
+        if (validItems.length > 0) {
+          return NextResponse.json({
+            success: true,
+            count: validItems.length,
+            items: validItems,
+            nextCursor,
+            sourcesCount: activeSourceIds.size,
+            failedSources: [],
+          });
+        }
+        // If validItems.length === 0, fall through to DEEP PATH (Firestore)
       }
     }
 
@@ -172,9 +179,6 @@ export async function GET(request: NextRequest) {
 
     while (validItems.length < TARGET_ITEMS && loops < MAX_LOOPS && hasMoreInDb) {
       let query = db.collection('feed_items') as any;
-      if (platform && platform !== 'all' && platform !== 'All') {
-        query = query.where('platform', '==', platform.toLowerCase());
-      }
       query = query.orderBy('publishedAt', 'desc').limit(50);
         
       if (currentCursor) {

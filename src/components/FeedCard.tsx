@@ -62,11 +62,6 @@ export function FeedCard({
   })();
 
   const handleCardClick = () => {
-    if (item.mediaType === 'video' && item.videoId) {
-      onOpenVideo(item);
-      return;
-    }
-
     onOpenReader(item);
   };
 

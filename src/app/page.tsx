@@ -80,7 +80,6 @@ export default function HomePage() {
 
   
   const handleAddSourceAndSync = async (newSource: FeedSource) => {
-    addSource(newSource);
     setSyncingSource(newSource);
     setIsSyncing(true);
 
@@ -92,9 +91,13 @@ export default function HomePage() {
       });
       const data = await res.json();
       console.log(`[Targeted Ingest] Ingested ${data.ingested || 0} items for ${newSource.name}`);
-      await fetchFeed(false, true, [newSource]);
+      
+      // Add source to state and trigger useEffect fetchFeed only after data is ingested
+      addSource(newSource);
     } catch (err) {
       console.error('Failed to ingest new source:', err);
+      // Ensure source is added even if ingestion fails so user can try again
+      addSource(newSource);
     } finally {
       setIsSyncing(false);
       setSyncingSource(null);
