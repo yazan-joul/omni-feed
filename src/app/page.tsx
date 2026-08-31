@@ -445,6 +445,7 @@ export default function HomePage() {
 
       {/* Add Custom Feed Modal */}
       <AddFeedModal
+        existingSources={sources}
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onAddSource={(source) => {

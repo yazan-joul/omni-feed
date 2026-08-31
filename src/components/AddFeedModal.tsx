@@ -17,13 +17,14 @@ import {
 import { FeedSource, ContentPlatform } from '@/lib/types';
 
 interface AddFeedModalProps {
+  existingSources?: FeedSource[];
   isOpen: boolean;
   onClose: () => void;
   onAddSource: (source: FeedSource) => void;
   onImportSources?: (sources: FeedSource[]) => void;
 }
 
-export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources }: AddFeedModalProps) {
+export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources, existingSources = [] }: AddFeedModalProps) {
   const [platform, setPlatform] = useState<ContentPlatform>('rss');
   const [url, setUrl] = useState('');
   const [name, setName] = useState('');
@@ -117,6 +118,19 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources }: 
     setIsSubmitting(true);
 
     try {
+      
+      // 0. Check for duplicates locally first
+      const normalizedUrlCheck = url.trim().toLowerCase();
+      const isDuplicate = existingSources.some(s => s.url.toLowerCase() === normalizedUrlCheck || (s.channelId && validationResult?.channelId && s.channelId === validationResult.channelId));
+      if (isDuplicate) {
+        setValidationResult({
+          valid: false,
+          error: 'You are already following this stream source.',
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
       // 1. Mandatory Validation Step before adding
       let currentValidation = validationResult;
       if (!currentValidation?.valid || currentValidation.url !== url.trim()) {
@@ -129,6 +143,17 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources }: 
           setIsSubmitting(false);
           return;
         }
+        
+        const duplicateAfterValidation = existingSources.some(s => s.url.toLowerCase() === data.url?.toLowerCase() || (s.channelId && data.channelId && s.channelId === data.channelId));
+        if (duplicateAfterValidation) {
+          setValidationResult({
+            valid: false,
+            error: 'You are already following this stream source.',
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
         currentValidation = {
           valid: true,
           title: data.title,
