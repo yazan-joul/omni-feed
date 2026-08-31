@@ -292,13 +292,9 @@ export function SourcesModal({
                         <span className="font-semibold text-sm text-slate-100 truncate">
                           {source.name}
                         </span>
-                        {source.isCustom ? (
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                        {source.isCustom && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
                             Custom
-                          </span>
-                        ) : (
-                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${badgeClass}`}>
-                            {label}
                           </span>
                         )}
                       </div>

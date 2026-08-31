@@ -12,7 +12,7 @@ import { SourcesModal } from '@/components/SourcesModal';
 import { useBookmarks } from '@/lib/hooks/useBookmarks';
 import { useCustomSources } from '@/lib/hooks/useCustomSources';
 import { DEFAULT_FEED_SOURCES } from '@/lib/config/default-sources';
-import { FeedItem, ContentPlatform, MediaType, TimeRange } from '@/lib/types';
+import { FeedItem, FeedSource, ContentPlatform, MediaType, TimeRange } from '@/lib/types';
 import { Bookmark, Loader2 } from 'lucide-react';
 
 export default function HomePage() {
@@ -48,6 +48,7 @@ export default function HomePage() {
   const cursorRef = useRef<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncingSource, setSyncingSource] = useState<FeedSource | null>(null);
   const [refreshingPlatform, setRefreshingPlatform] = useState<ContentPlatform | 'all' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [failedSources, setFailedSources] = useState<string[]>([]);
@@ -76,6 +77,29 @@ export default function HomePage() {
 
   const fetchAbortController = useRef<AbortController | null>(null);
 
+
+  
+  const handleAddSourceAndSync = async (newSource: FeedSource) => {
+    addSource(newSource);
+    setSyncingSource(newSource);
+    setIsSyncing(true);
+
+    try {
+      const res = await fetch(`/api/cron/ingest?sourceId=${encodeURIComponent(newSource.id)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customSources: [newSource] }),
+      });
+      const data = await res.json();
+      console.log(`[Targeted Ingest] Ingested ${data.ingested || 0} items for ${newSource.name}`);
+      await fetchFeed(false, true);
+    } catch (err) {
+      console.error('Failed to ingest new source:', err);
+    } finally {
+      setIsSyncing(false);
+      setSyncingSource(null);
+    }
+  };
 
   // Sync Feeds (Background Ingestion)
   const handleSyncFeeds = async (platformOverride?: string) => {
@@ -117,7 +141,7 @@ export default function HomePage() {
   };
 
   // Fetch Aggregated Feed Data (Only runs on mount, source changes, or manual refresh)
-  const fetchFeed = useCallback(async (isLoadMore = false) => {
+  const fetchFeed = useCallback(async (isLoadMore = false, forceRefresh = false) => {
     if (isLoadMore) {
       setIsLoadingMore(true);
     } else {
@@ -168,6 +192,9 @@ export default function HomePage() {
       
       if (isLoadMore && cursorRef.current) {
         params.set('cursor', cursorRef.current);
+      }
+      if (forceRefresh) {
+        params.set('forceRefresh', 'true');
       }
 
       const res = await fetch(`/api/feed?${params.toString()}`, {
@@ -380,13 +407,19 @@ export default function HomePage() {
 
         {/* Feed Cards Grid / List View */}
         {isSyncing && (
-          <div className="mb-6 p-4 rounded-2xl bg-cyan-950/40 border border-cyan-500/30 flex items-center gap-3 text-cyan-200 shadow-lg shadow-cyan-950/20">
+          <div className="mb-6 p-4 rounded-2xl bg-cyan-950/40 border border-cyan-500/30 flex items-center gap-3 text-cyan-200 shadow-lg shadow-cyan-950/20 animate-in fade-in duration-300">
             <div className="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center shrink-0">
               <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
             </div>
             <div className="space-y-0.5">
-               <p className="text-sm font-semibold text-cyan-300">Scraping Live Data...</p>
-               <p className="text-xs opacity-90">Please wait while we connect to social platforms and fetch the latest content. This can take up to 30 seconds for heavy sources like Instagram.</p>
+               <p className="text-sm font-semibold text-cyan-300">
+                 {syncingSource ? `Loading content from ${syncingSource.name}...` : 'Scraping Live Data...'}
+               </p>
+               <p className="text-xs opacity-90">
+                 {syncingSource
+                   ? `Connecting to ${syncingSource.platform === 'rss' ? 'RSS/Podcast' : syncingSource.platform} and loading recent posts into your timeline.`
+                   : 'Please wait while we connect to social platforms and fetch the latest content. This can take up to 30 seconds for heavy sources like Instagram.'}
+               </p>
             </div>
           </div>
         )}
@@ -449,7 +482,7 @@ export default function HomePage() {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onAddSource={(source) => {
-          addSource(source);
+          handleAddSourceAndSync(source);
         }}
         onImportSources={(imported) => {
           importSources(imported);

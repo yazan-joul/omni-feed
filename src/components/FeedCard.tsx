@@ -209,11 +209,8 @@ export function FeedCard({
                 ) : (
                   <Rss className="w-3 h-3 text-cyan-400" />
                 )}
-                {item.platform === 'instagram' ? 'Instagram' : isPodcast ? 'Podcast' : item.sourceName}
+                {item.sourceName || item.author.name}
               </span>
-              {isPodcast && (
-                <span className="text-slate-400 truncate max-w-[8rem]">{item.sourceName}</span>
-              )}
               <span className="text-slate-400 flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 {formattedDate}
@@ -420,11 +417,7 @@ export function FeedCard({
               </span>
             </div>
 
-            {item.tags[0] && (
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-white/5">
-                {item.tags[0]}
-              </span>
-            )}
+            
           </div>
 
           {/* Title */}

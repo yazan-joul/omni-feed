@@ -149,8 +149,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         platform: 'instagram',
-        title: `@${handle} (Instagram)`,
-        description: `Instagram social stream for @${handle}`,
+        title: `@${handle}`,
+        description: `Instagram feed for @${handle}`,
         url: normalizedUrl,
       });
     }
@@ -169,8 +169,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         platform: 'twitter',
-        title: `@${handle} on X`,
-        description: `Social updates and tweets from @${handle}`,
+        title: `@${handle}`,
+        description: `X timeline for @${handle}`,
         url: normalizedUrl,
       });
     }
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         platform: 'facebook',
-        title: `${handle} on Facebook`,
+        title: `${handle}`,
         description: `Facebook stream for ${handle}`,
         url: normalizedUrl,
       });
