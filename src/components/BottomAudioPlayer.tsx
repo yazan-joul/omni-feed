@@ -115,7 +115,7 @@ export function BottomAudioPlayer({ item, isOpen, onClose }: BottomAudioPlayerPr
   const sourceLabel = item.sourceName || item.author.name || 'Podcast';
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 px-3 pb-3 sm:px-4 sm:pb-4">
+    <div className="fixed inset-x-0 bottom-0 z-[60] px-3 pb-3 sm:px-4 sm:pb-4">
       <div className="mx-auto max-w-7xl">
         <div className="glass-panel relative w-full overflow-hidden rounded-2xl border border-cyan-500/30 bg-slate-900/90 shadow-2xl shadow-cyan-950/40 backdrop-blur-xl">
           <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-slate-900/80 to-emerald-500/10" />

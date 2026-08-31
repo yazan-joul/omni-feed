@@ -38,7 +38,11 @@ export default function HomePage() {
   // Feed Data & Loading
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const cursorRef = useRef<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [refreshingPlatform, setRefreshingPlatform] = useState<ContentPlatform | 'all' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [failedSources, setFailedSources] = useState<string[]>([]);
 
@@ -83,11 +87,17 @@ export default function HomePage() {
   // Sync Feeds (Background Ingestion)
   const handleSyncFeeds = async (platformOverride?: string) => {
     if (isSyncing) return;
+    const targetPlatform =
+      platformOverride && platformOverride !== 'all' && platformOverride !== 'All'
+        ? (platformOverride as ContentPlatform)
+        : 'all';
+
     setIsSyncing(true);
+    setRefreshingPlatform(targetPlatform);
     try {
       let url = '/api/cron/ingest';
-      if (platformOverride && platformOverride !== 'all' && platformOverride !== 'All') {
-        url += `?platform=${platformOverride}`;
+      if (targetPlatform !== 'all') {
+        url += `?platform=${targetPlatform}`;
       }
       
       const res = await fetch(url, {
@@ -109,21 +119,30 @@ export default function HomePage() {
       console.error('Network error during sync:', error);
     } finally {
       setIsSyncing(false);
+      setRefreshingPlatform(null);
     }
   };
 
   // Fetch Aggregated Feed Data (Only runs on mount, source changes, or manual refresh)
-  const fetchFeed = useCallback(async () => {
-    setIsLoading(true);
+  const fetchFeed = useCallback(async (isLoadMore = false) => {
+    if (isLoadMore) {
+      setIsLoadingMore(true);
+    } else {
+      setIsLoading(true);
+      cursorRef.current = null;
+      setHasMore(true);
+      setFeedItems([]); // clear items on hard refresh
+    }
+    
     setError(null);
     setFailedSources([]);
 
-    // Cancel any in-flight request to prevent race conditions
-    if (fetchAbortController.current) {
+    // Cancel any in-flight request to prevent race conditions (only if not loading more)
+    if (!isLoadMore && fetchAbortController.current) {
       fetchAbortController.current.abort();
     }
     const abortController = new AbortController();
-    fetchAbortController.current = abortController;
+    if (!isLoadMore) fetchAbortController.current = abortController;
 
     try {
       const params = new URLSearchParams();
@@ -141,6 +160,10 @@ export default function HomePage() {
       // Pass enabled custom sources
       if (customOnly.length > 0) {
         params.set('customSources', JSON.stringify(customOnly.filter((s) => s.enabled)));
+      }
+      
+      if (isLoadMore && cursorRef.current) {
+        params.set('cursor', cursorRef.current);
       }
 
       const res = await fetch(`/api/feed?${params.toString()}`, {
@@ -171,23 +194,31 @@ export default function HomePage() {
       }
 
       // Ensure this is still the most recent request
-      if (abortController.signal.aborted) return;
+      if (!isLoadMore && abortController.signal.aborted) return;
 
       if (data.success && Array.isArray(data.items)) {
-        setFeedItems(data.items);
+        if (isLoadMore) {
+          setFeedItems(prev => [...prev, ...data.items]);
+        } else {
+          setFeedItems(data.items);
+        }
+        cursorRef.current = data.nextCursor || null;
+        setHasMore(!!data.nextCursor);
         setFailedSources(data.failedSources || []);
       } else {
         setError('Unable to load feed streams.');
-        setFeedItems([]);
+        if (!isLoadMore) setFeedItems([]);
       }
     } catch (err: any) {
       if (err.name === 'AbortError') return;
       console.error('Fetch error:', err);
       setError(err?.message ? `Connection interrupted: ${err.message}` : 'Connection interrupted. Serving cached items.');
-      setFeedItems((current) => (current.length > 0 ? current : []));
+      if (!isLoadMore) setFeedItems((current) => (current.length > 0 ? current : []));
     } finally {
-      if (!abortController.signal.aborted) {
+      if (!isLoadMore && !abortController.signal.aborted) {
         setIsLoading(false);
+      } else if (isLoadMore) {
+        setIsLoadingMore(false);
       }
     }
   }, [customOnly, sources]);
@@ -232,13 +263,11 @@ export default function HomePage() {
   const handleOpenReader = (item: FeedItem) => {
     markAsRead(item.id);
     setActiveReaderItem(item);
-    setActivePodcastItem(null);
   };
 
   const handleOpenPodcast = (item: FeedItem) => {
     markAsRead(item.id);
     setActiveVideoItem(null);
-    setActiveReaderItem(null);
     setActivePodcastItem(item);
   };
 
@@ -337,6 +366,7 @@ export default function HomePage() {
           viewMode={viewMode}
           setViewMode={setViewMode}
           isLoading={isLoading || isSyncing}
+          refreshingPlatform={refreshingPlatform}
           onRefresh={() => handleSyncFeeds()}
           onRefreshPlatform={(p) => handleSyncFeeds(p)}
         />
@@ -351,6 +381,9 @@ export default function HomePage() {
         <FeedGrid
           items={displayedItems}
           isLoading={isLoading}
+          isLoadingMore={isLoadingMore}
+          hasMore={hasMore}
+          onLoadMore={() => fetchFeed(true)}
           viewMode={viewMode}
           isBookmarked={isBookmarked}
           isRead={isRead}
@@ -388,6 +421,7 @@ export default function HomePage() {
         onClose={() => setActiveReaderItem(null)}
         isBookmarked={activeReaderItem ? isBookmarked(activeReaderItem.id) : false}
         onToggleBookmark={toggleBookmark}
+        onPlayPodcast={handleOpenPodcast}
       />
 
       <BottomAudioPlayer

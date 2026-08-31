@@ -19,6 +19,7 @@ import {
   Download,
   Loader2,
   FileCode,
+  AlertTriangle,
 } from 'lucide-react';
 import { FeedSource } from '@/lib/types';
 
@@ -46,6 +47,7 @@ export function SourcesModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [importStatus, setImportStatus] = useState<string | null>(null);
+  const [showConfirmReset, setShowConfirmReset] = useState(false);
 
   if (!isOpen) return null;
 
@@ -200,7 +202,7 @@ export function SourcesModal({
 
             {/* Reset */}
             <button
-              onClick={onResetSources}
+              onClick={() => setShowConfirmReset(true)}
               title="Reset to default curated streams"
               className="p-2 px-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/5 transition-all text-xs flex items-center gap-1.5"
             >
@@ -231,7 +233,7 @@ export function SourcesModal({
               <p>All streams have been removed.</p>
               <div className="flex items-center justify-center gap-3">
                 <button
-                  onClick={onResetSources}
+                  onClick={() => setShowConfirmReset(true)}
                   className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs shadow-md shadow-cyan-600/20"
                 >
                   Restore Default Streams
@@ -331,6 +333,47 @@ export function SourcesModal({
             Done
           </button>
         </div>
+
+        {/* Restore to Default Confirmation Popup */}
+        {showConfirmReset && (
+          <div className="absolute inset-0 z-30 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+            <div className="w-full max-w-sm glass-panel bg-slate-900/95 rounded-2xl border border-white/10 p-6 shadow-2xl space-y-4 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 mx-auto flex items-center justify-center border border-amber-500/20 shadow-inner">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+
+              <div className="space-y-1.5">
+                <h3 className="text-base font-bold text-slate-100">
+                  Restore Default Streams?
+                </h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Are you sure? This will reset all feed streams back to the default curated list and remove any custom added feeds.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmReset(false)}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-white/5 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onResetSources();
+                    setShowConfirmReset(false);
+                  }}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold shadow-lg shadow-amber-600/20 transition-all flex items-center justify-center gap-1.5"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Restore</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

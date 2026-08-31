@@ -67,8 +67,18 @@ export function FeedCard({
       return;
     }
 
+    onOpenReader(item);
+  };
+
+  const handleMediaClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (item.mediaType === 'podcast') {
       onOpenPodcast(item);
+      return;
+    }
+
+    if (item.mediaType === 'video' && item.videoId) {
+      onOpenVideo(item);
       return;
     }
 
@@ -122,14 +132,17 @@ export function FeedCard({
         {/* Left: Thumbnail & Title */}
         <div className="flex items-center gap-4 flex-1 min-w-0">
           {(item.thumbnailUrl || isPodcast) && (
-            <div className="relative w-28 h-20 sm:w-36 sm:h-24 rounded-xl overflow-hidden flex-shrink-0 bg-slate-900 border border-white/5">
+            <div
+              onClick={handleMediaClick}
+              className="relative w-28 h-20 sm:w-36 sm:h-24 rounded-xl overflow-hidden flex-shrink-0 bg-slate-900 border border-white/5 cursor-pointer group/thumb"
+            >
               {shouldRenderThumbnail ? (
                 <>
                   <img
                     src={item.thumbnailUrl}
                     alt={item.title}
                     onError={() => setImageFailed(true)}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-300"
                     loading="lazy"
                   />
                   <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-transparent to-black/10" />
@@ -139,8 +152,8 @@ export function FeedCard({
               )}
 
               {isVideo && (
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/20 transition-all">
-                  <div className="w-8 h-8 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-lg">
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover/thumb:bg-black/20 transition-all">
+                  <div className="w-8 h-8 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-lg group-hover/thumb:scale-110 transition-transform">
                     <Play className="w-4 h-4 fill-white ml-0.5" />
                   </div>
                 </div>
@@ -148,7 +161,7 @@ export function FeedCard({
 
               {isPodcast && !isVideo && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-8 h-8 rounded-full bg-emerald-600/90 text-white flex items-center justify-center shadow-lg shadow-emerald-600/20">
+                  <div className="w-8 h-8 rounded-full bg-emerald-600/90 text-white flex items-center justify-center shadow-lg shadow-emerald-600/20 group-hover/thumb:scale-110 transition-transform">
                     <Play className="w-4 h-4 fill-white ml-0.5" />
                   </div>
                 </div>
@@ -156,8 +169,8 @@ export function FeedCard({
 
               {shouldUsePodcastFallback && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-600/10 text-emerald-300 backdrop-blur-sm">
-                    <Headphones className="w-5 h-5" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-600/20 text-emerald-300 backdrop-blur-sm group-hover/thumb:scale-110 transition-transform">
+                    <Play className="w-4 h-4 fill-emerald-300 ml-0.5" />
                   </div>
                 </div>
               )}
@@ -278,7 +291,10 @@ export function FeedCard({
     >
       {/* Media Image Header */}
       {(item.thumbnailUrl || isPodcast) && (
-        <div className="relative aspect-video w-full overflow-hidden bg-slate-950">
+        <div
+          onClick={handleMediaClick}
+          className="relative aspect-video w-full overflow-hidden bg-slate-950 cursor-pointer"
+        >
           {shouldRenderThumbnail ? (
             <>
               <img
@@ -305,7 +321,7 @@ export function FeedCard({
 
           {isPodcast && !isVideo && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-12 h-12 rounded-full bg-emerald-600/90 text-white flex items-center justify-center shadow-lg shadow-emerald-600/20 group-hover:scale-110 transition-all duration-300">
+              <div className="w-12 h-12 rounded-full bg-emerald-600/90 text-white flex items-center justify-center shadow-lg shadow-emerald-600/20 group-hover:scale-110 group-hover:bg-emerald-500 transition-all duration-300">
                 <Play className="w-5 h-5 fill-white ml-0.5" />
               </div>
             </div>
@@ -313,8 +329,8 @@ export function FeedCard({
 
           {shouldUsePodcastFallback && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-600/10 text-emerald-300 shadow-lg shadow-emerald-900/20 backdrop-blur-sm">
-                <Headphones className="w-7 h-7" />
+              <div className="flex h-16 w-16 items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-600/20 text-emerald-300 shadow-lg shadow-emerald-900/20 backdrop-blur-sm group-hover:scale-110 group-hover:bg-emerald-600/30 transition-all duration-300">
+                <Play className="w-7 h-7 fill-emerald-300 ml-0.5" />
               </div>
             </div>
           )}
@@ -423,7 +439,7 @@ export function FeedCard({
             onClick={handleCardClick}
             className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform"
           >
-            {['instagram', 'facebook', 'twitter', 'reddit'].includes(item.platform) ? 'View Post' : isVideo ? 'Watch Video' : isPodcast ? 'Listen Podcast' : 'Read Article'} &rarr;
+            {['instagram', 'facebook', 'twitter', 'reddit'].includes(item.platform) ? 'View Post' : isVideo ? 'Watch Video' : isPodcast ? 'Episode Details' : 'Read Article'} &rarr;
           </button>
 
           <div className="flex items-center gap-1.5">

@@ -38,6 +38,7 @@ interface FilterBarProps {
   viewMode: 'grid' | 'list';
   setViewMode: (v: 'grid' | 'list') => void;
   isLoading: boolean;
+  refreshingPlatform?: ContentPlatform | 'all' | null;
   onRefresh: () => void;
   onRefreshPlatform: (platform: ContentPlatform) => void;
 }
@@ -56,6 +57,7 @@ export function FilterBar({
   viewMode,
   setViewMode,
   isLoading,
+  refreshingPlatform,
   onRefresh,
   onRefreshPlatform,
 }: FilterBarProps) {
@@ -81,8 +83,16 @@ export function FilterBar({
     hoverColorClass: string
   ) => {
     const isActive = selectedPlatform === platform;
+    const isThisPlatformRefreshing = refreshingPlatform === platform;
+
     return (
-      <div className="flex items-center">
+      <div
+        className={`inline-flex items-stretch rounded-lg border transition-all shrink-0 ${
+          isActive
+            ? `${activeColorClass} border-transparent shadow-sm`
+            : `bg-slate-900/50 border-white/10 ${hoverColorClass}`
+        }`}
+      >
         <button
           onClick={() => {
             setSelectedPlatform(platform);
@@ -94,29 +104,36 @@ export function FilterBar({
               setSelectedMediaType('all');
             }
           }}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-l-lg text-xs font-medium transition-all border border-r-0 ${
-            isActive
-              ? `${activeColorClass} border-transparent`
-              : `bg-slate-900/50 border-white/5 text-slate-400 ${hoverColorClass}`
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
+            isActive ? 'text-white' : 'text-slate-300 hover:text-white'
           }`}
         >
           <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : iconColorClass}`} />
-          {label}
+          <span>{label}</span>
         </button>
+
+        <div className={`w-[1px] my-1 ${isActive ? 'bg-white/20' : 'bg-white/10'}`} />
+
         <button
           onClick={(e) => {
             e.stopPropagation();
             onRefreshPlatform(platform);
           }}
           title={`Refresh ${label}`}
-          disabled={isLoading}
-          className={`flex items-center px-2 py-1.5 rounded-r-lg border-l border-white/10 transition-all border border-l-0 ${
+          disabled={isThisPlatformRefreshing || isLoading}
+          className={`flex items-center justify-center px-2 py-1.5 transition-colors focus:outline-none ${
             isActive
-              ? `${activeColorClass} border-transparent hover:brightness-110`
-              : `bg-slate-900/50 border-white/5 text-slate-500 hover:text-slate-300 ${hoverColorClass}`
-          }`}
+              ? 'text-white/80 hover:text-white hover:bg-black/10'
+              : 'text-slate-400 hover:text-white hover:bg-white/5'
+          } disabled:opacity-60 disabled:cursor-not-allowed`}
         >
-          <RotateCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : 'opacity-60 group-hover:opacity-100'}`} />
+          <RotateCw
+            className={`w-3.5 h-3.5 ${
+              isThisPlatformRefreshing
+                ? 'animate-spin text-cyan-400 opacity-100'
+                : 'opacity-70 hover:opacity-100'
+            }`}
+          />
         </button>
       </div>
     );
@@ -221,7 +238,13 @@ export function FilterBar({
             title="Refresh All"
             className="shrink-0 p-2.5 rounded-xl bg-slate-900/60 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white transition-all disabled:opacity-50"
           >
-            <RotateCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-cyan-400' : ''}`} />
+            <RotateCw
+              className={`w-4 h-4 ${
+                refreshingPlatform === 'all' || (isLoading && !refreshingPlatform)
+                  ? 'animate-spin text-cyan-400'
+                  : ''
+              }`}
+            />
           </button>
         </div>
       </div>
@@ -269,21 +292,21 @@ export function FilterBar({
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none mt-2">
         <button
           onClick={() => setSelectedPlatform('all')}
-          className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+          className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all border shrink-0 ${
             selectedPlatform === 'all'
-              ? 'bg-slate-700 text-white border-slate-600'
-              : 'bg-slate-900/50 text-slate-400 hover:text-slate-200 border-white/5'
+              ? 'bg-slate-700 text-white border-slate-600 shadow-sm'
+              : 'bg-slate-900/50 text-slate-400 hover:text-slate-200 border-white/10 hover:bg-slate-900/80 hover:border-white/20'
           }`}
         >
           All Platforms
         </button>
         
-        {renderPlatformButton('youtube', 'YouTube', Youtube, 'bg-red-600/80 text-white', 'text-red-500', 'hover:text-red-400')}
-        {renderPlatformButton('rss', 'RSS', Rss, 'bg-cyan-600/80 text-white', 'text-cyan-400', 'hover:text-cyan-400')}
-        {renderPlatformButton('twitter', 'X / Twitter', Twitter, 'bg-sky-500/80 text-white', 'text-sky-400', 'hover:text-sky-400')}
-        {renderPlatformButton('reddit', 'Reddit', MessageCircle, 'bg-orange-600/80 text-white', 'text-orange-500', 'hover:text-orange-500')}
-        {renderPlatformButton('instagram', 'Instagram', Instagram, 'bg-pink-600/80 text-white', 'text-pink-400', 'hover:text-pink-400')}
-        {renderPlatformButton('facebook', 'Facebook', Facebook, 'bg-blue-700/80 text-white', 'text-blue-500', 'hover:text-blue-500')}
+        {renderPlatformButton('youtube', 'YouTube', Youtube, 'bg-red-600/90 text-white', 'text-red-500', 'hover:border-red-500/40 hover:bg-slate-900/80')}
+        {renderPlatformButton('rss', 'RSS', Rss, 'bg-cyan-600/90 text-white', 'text-cyan-400', 'hover:border-cyan-500/40 hover:bg-slate-900/80')}
+        {renderPlatformButton('twitter', 'X / Twitter', Twitter, 'bg-sky-500/90 text-white', 'text-sky-400', 'hover:border-sky-500/40 hover:bg-slate-900/80')}
+        {renderPlatformButton('reddit', 'Reddit', MessageCircle, 'bg-orange-600/90 text-white', 'text-orange-500', 'hover:border-orange-500/40 hover:bg-slate-900/80')}
+        {renderPlatformButton('instagram', 'Instagram', Instagram, 'bg-pink-600/90 text-white', 'text-pink-400', 'hover:border-pink-500/40 hover:bg-slate-900/80')}
+        {renderPlatformButton('facebook', 'Facebook', Facebook, 'bg-blue-700/90 text-white', 'text-blue-500', 'hover:border-blue-500/40 hover:bg-slate-900/80')}
       </div>
     </div>
   );

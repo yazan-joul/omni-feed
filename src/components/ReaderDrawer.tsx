@@ -11,6 +11,8 @@ import {
   Type,
   BookOpen,
   Rss,
+  Headphones,
+  Play,
 } from 'lucide-react';
 import { FeedItem } from '@/lib/types';
 import { formatDistanceToNow } from 'date-fns';
@@ -21,6 +23,7 @@ interface ReaderDrawerProps {
   onClose: () => void;
   isBookmarked: boolean;
   onToggleBookmark: (item: FeedItem) => void;
+  onPlayPodcast?: (item: FeedItem) => void;
 }
 
 export function ReaderDrawer({
@@ -29,6 +32,7 @@ export function ReaderDrawer({
   onClose,
   isBookmarked,
   onToggleBookmark,
+  onPlayPodcast,
 }: ReaderDrawerProps) {
   const [fontSize, setFontSize] = useState<'normal' | 'large' | 'xlarge'>('normal');
   const [copied, setCopied] = useState(false);
@@ -53,6 +57,8 @@ export function ReaderDrawer({
 
   if (!isOpen || !item) return null;
 
+  const isPodcast = item.mediaType === 'podcast';
+
   const handleShare = () => {
     navigator.clipboard.writeText(item.url);
     setCopied(true);
@@ -66,6 +72,21 @@ export function ReaderDrawer({
       return 'Recently';
     }
   })();
+
+  const formattedDuration =
+    item.durationSeconds !== undefined && item.durationSeconds !== null
+      ? (() => {
+          const hours = Math.floor(item.durationSeconds / 3600);
+          const minutes = Math.floor((item.durationSeconds % 3600) / 60);
+          const seconds = item.durationSeconds % 60;
+
+          if (hours > 0) {
+            return [hours, minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':');
+          }
+
+          return `${minutes}:${String(seconds).padStart(2, '0')}`;
+        })()
+      : undefined;
 
   const fontSizeClasses = {
     normal: 'text-base leading-relaxed',
@@ -83,8 +104,15 @@ export function ReaderDrawer({
         {/* Top Control Bar */}
         <div className="p-4 px-6 border-b border-white/10 flex items-center justify-between gap-4 bg-slate-950/60">
           <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-600/10 text-cyan-400 border border-cyan-500/20 text-xs font-semibold">
-              <BookOpen className="w-3.5 h-3.5" /> Reader Mode
+            <span
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                isPodcast
+                  ? 'bg-emerald-600/10 text-emerald-400 border border-emerald-500/20'
+                  : 'bg-cyan-600/10 text-cyan-400 border border-cyan-500/20'
+              }`}
+            >
+              {isPodcast ? <Headphones className="w-3.5 h-3.5" /> : <BookOpen className="w-3.5 h-3.5" />}
+              {isPodcast ? 'Podcast Episode' : 'Reader Mode'}
             </span>
           </div>
 
@@ -152,22 +180,80 @@ export function ReaderDrawer({
 
         {/* Scrollable Reader Body */}
         <div className="flex-1 overflow-y-auto p-6 sm:p-10 space-y-6">
-          {/* Cover Photo */}
-          {item.thumbnailUrl && (
-            <div className="relative aspect-video w-full rounded-2xl overflow-hidden shadow-lg border border-white/10">
+          {/* Cover Photo or Podcast Hero */}
+          {item.thumbnailUrl ? (
+            <div className="relative aspect-video w-full rounded-2xl overflow-hidden shadow-lg border border-white/10 group">
               <img src={item.thumbnailUrl} alt={item.title} className="w-full h-full object-cover" />
+              {isPodcast && onPlayPodcast && (
+                <div
+                  onClick={() => onPlayPodcast(item)}
+                  className="absolute inset-0 bg-black/40 hover:bg-black/30 flex items-center justify-center cursor-pointer transition-all"
+                >
+                  <div className="w-14 h-14 rounded-full bg-emerald-600/90 hover:bg-emerald-500 hover:scale-110 text-white flex items-center justify-center shadow-xl shadow-emerald-950/50 transition-all">
+                    <Play className="w-6 h-6 fill-white ml-0.5" />
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : isPodcast ? (
+            <div className="relative aspect-video w-full rounded-2xl overflow-hidden shadow-lg border border-emerald-500/20 bg-gradient-to-br from-emerald-900/30 via-slate-900 to-cyan-900/20 flex flex-col items-center justify-center p-6 text-center">
+              {onPlayPodcast ? (
+                <button
+                  onClick={() => onPlayPodcast(item)}
+                  className="flex h-16 w-16 items-center justify-center rounded-full border border-emerald-400/40 bg-emerald-600/20 text-emerald-300 shadow-xl hover:scale-110 hover:bg-emerald-600/30 transition-all cursor-pointer mb-3"
+                >
+                  <Play className="w-7 h-7 fill-emerald-300 ml-0.5" />
+                </button>
+              ) : (
+                <div className="flex h-16 w-16 items-center justify-center rounded-full border border-emerald-400/40 bg-emerald-600/20 text-emerald-300 shadow-xl mb-3">
+                  <Headphones className="w-7 h-7" />
+                </div>
+              )}
+              <span className="text-xs font-semibold text-emerald-400">{item.sourceName}</span>
+            </div>
+          ) : null}
+
+          {/* Podcast Play Banner if audio is available */}
+          {isPodcast && onPlayPodcast && (
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-950/70 via-slate-900 to-cyan-950/40 border border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg shadow-emerald-950/20">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-11 h-11 rounded-xl bg-emerald-600 flex items-center justify-center text-white shrink-0 shadow-md shadow-emerald-600/30">
+                  <Headphones className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-100 truncate">Listen to Episode</p>
+                  <p className="text-xs text-emerald-400">
+                    {formattedDuration ? `Runtime: ${formattedDuration}` : 'Full audio track available'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => onPlayPodcast(item)}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-600/30 transition-all shrink-0 cursor-pointer"
+              >
+                <Play className="w-3.5 h-3.5 fill-white" />
+                Play in Player
+              </button>
             </div>
           )}
 
-          {/* Article Header */}
+          {/* Article / Podcast Header */}
           <div className="space-y-3 border-b border-white/10 pb-6">
             <div className="flex items-center gap-2 text-xs text-slate-400">
-              <span className="font-semibold text-cyan-400">{item.sourceName}</span>
+              <span className={`font-semibold ${isPodcast ? 'text-emerald-400' : 'text-cyan-400'}`}>
+                {item.sourceName}
+              </span>
               <span>•</span>
               <span className="flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5" /> {formattedDate}
               </span>
-              {item.metrics?.readTime && (
+              {isPodcast && formattedDuration && (
+                <>
+                  <span>•</span>
+                  <span>{formattedDuration}</span>
+                </>
+              )}
+              {!isPodcast && item.metrics?.readTime && (
                 <>
                   <span>•</span>
                   <span>{item.metrics.readTime}</span>
@@ -188,18 +274,24 @@ export function ReaderDrawer({
                   className="w-8 h-8 rounded-full object-cover border border-white/10"
                 />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-cyan-600/20 text-cyan-400 flex items-center justify-center font-bold text-xs">
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
+                    isPodcast ? 'bg-emerald-600/20 text-emerald-400' : 'bg-cyan-600/20 text-cyan-400'
+                  }`}
+                >
                   {item.author.name.charAt(0)}
                 </div>
               )}
               <div>
                 <p className="text-sm font-medium text-slate-200">{item.author.name}</p>
-                <p className="text-xs text-slate-400">Author / Contributor</p>
+                <p className="text-xs text-slate-400">
+                  {isPodcast ? 'Host / Producer' : 'Author / Contributor'}
+                </p>
               </div>
             </div>
           </div>
 
-          {/* Article Content / Excerpt */}
+          {/* Article / Show Notes Content */}
           <div className={`text-slate-300 space-y-4 ${fontSizeClasses}`}>
             {item.content ? (
               item.content.includes('<') ? (
@@ -216,7 +308,9 @@ export function ReaderDrawer({
               <p className="whitespace-pre-line leading-relaxed text-slate-200">{item.summary}</p>
             ) : (
               <p className="italic text-slate-400">
-                Full article body is protected or preview only. Click below to view on the original website.
+                {isPodcast
+                  ? 'No show notes provided for this episode. Click below to view on the original platform.'
+                  : 'Full article body is protected or preview only. Click below to view on the original website.'}
               </p>
             )}
           </div>
@@ -230,9 +324,14 @@ export function ReaderDrawer({
               href={item.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-medium flex items-center justify-center gap-2 shadow-lg shadow-cyan-600/20 transition-all"
+              className={`w-full sm:w-auto px-6 py-2.5 rounded-xl text-white text-sm font-medium flex items-center justify-center gap-2 shadow-lg transition-all ${
+                isPodcast
+                  ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/20'
+                  : 'bg-cyan-600 hover:bg-cyan-500 shadow-cyan-600/20'
+              }`}
             >
-              Read Full Post on {item.sourceName} <ExternalLink className="w-4 h-4" />
+              {isPodcast ? `Open Episode on ${item.sourceName}` : `Read Full Post on ${item.sourceName}`}{' '}
+              <ExternalLink className="w-4 h-4" />
             </a>
           </div>
         </div>

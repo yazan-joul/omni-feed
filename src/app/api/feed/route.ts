@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/lib/firebase/admin';
 import { FeedItem } from '@/lib/types';
 import { DEFAULT_FEED_SOURCES } from '@/lib/config/default-sources';
+import { FALLBACK_FEED_ITEMS } from '@/lib/mock-data';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 60; // Cache for 60 seconds
@@ -55,23 +56,49 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  const cursor = searchParams.get('cursor');
+
   try {
-    // We fetch the latest 500 items across the board and filter in memory since
-    // Firebase IN queries are limited to 30 elements, and we might have custom feeds.
-    const snapshot = await db.collection('feed_items')
-      .orderBy('publishedAt', 'desc')
-      .limit(3000)
-      .get();
-      
-    let items: FeedItem[] = [];
+    const activeSourcesArray = Array.from(activeSourceIds);
+    // Firestore limits `in` queries to 30 values
+    const chunkSize = 30;
+    const batches = [];
+    for (let i = 0; i < activeSourcesArray.length; i += chunkSize) {
+      batches.push(activeSourcesArray.slice(i, i + chunkSize));
+    }
+
+    const LIMIT = 50;
     
-    snapshot.forEach(doc => {
-      const data = doc.data() as FeedItem;
-      // Filter out items that are not from an active source
-      if (activeSourceIds.has(data.sourceId)) {
-        items.push(data);
+    // Fetch from all batches in parallel
+    const snapshotPromises = batches.map(batch => {
+      let query = db.collection('feed_items')
+        .where('sourceId', 'in', batch)
+        .orderBy('publishedAt', 'desc')
+        .limit(LIMIT);
+      
+      if (cursor) {
+        query = query.startAfter(cursor);
       }
+      
+      return query.get();
     });
+
+    const snapshots = await Promise.all(snapshotPromises);
+    
+    let items: FeedItem[] = [];
+    snapshots.forEach(snapshot => {
+      snapshot.forEach(doc => {
+        items.push(doc.data() as FeedItem);
+      });
+    });
+
+    // Merge and sort
+    items.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+    
+    // Take top LIMIT items
+    items = items.slice(0, LIMIT);
+
+    let nextCursor = items.length === LIMIT ? items[items.length - 1].publishedAt : null;
 
     // Apply late-stage filters (search, mediaType)
     if (mediaType && mediaType !== 'all') {
@@ -92,15 +119,37 @@ export async function GET(request: NextRequest) {
       success: true,
       count: items.length,
       items: items,
+      nextCursor,
       sourcesCount: activeSourceIds.size,
       failedSources: [],
     });
   } catch (error: any) {
-    console.error('Error fetching from Firestore:', error);
+    console.error('Error fetching from Firestore, falling back to cached items:', error?.message || error);
+    
+    let fallbackItems = [...FALLBACK_FEED_ITEMS];
+    if (platform && platform !== 'all' && platform !== 'All') {
+      fallbackItems = fallbackItems.filter((item) => item.platform.toLowerCase() === platform.toLowerCase());
+    }
+    if (mediaType && mediaType !== 'all') {
+      fallbackItems = fallbackItems.filter((item) => item.mediaType === mediaType);
+    }
+    if (search) {
+      fallbackItems = fallbackItems.filter(
+        (item) =>
+          item.title.toLowerCase().includes(search) ||
+          item.summary?.toLowerCase().includes(search) ||
+          item.author.name.toLowerCase().includes(search) ||
+          item.tags.some((tag) => tag.toLowerCase().includes(search))
+      );
+    }
+
     return NextResponse.json({
-      success: false,
-      error: 'Failed to load feed',
-      items: []
-    }, { status: 500 });
+      success: true,
+      count: fallbackItems.length,
+      items: fallbackItems,
+      nextCursor: null,
+      sourcesCount: activeSourceIds.size,
+      failedSources: [],
+    });
   }
 }

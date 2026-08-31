@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { FeedItem } from '@/lib/types';
 import { FeedCard } from './FeedCard';
-import { Inbox, AlertTriangle, CheckCircle2, Calendar, ChevronDown, ChevronRight } from 'lucide-react';
+import { Inbox, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 interface FeedGridProps {
   items: FeedItem[];
   isLoading: boolean;
+  isLoadingMore?: boolean;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
   viewMode: 'grid' | 'list';
   isBookmarked: (id: string) => boolean;
   isRead: (id: string) => boolean;
@@ -20,18 +23,12 @@ interface FeedGridProps {
   failedSources?: string[];
 }
 
-interface TimeChunk {
-  title: string;
-  subtitle?: string;
-  items: FeedItem[];
-  isToday?: boolean;
-  isOlder?: boolean;
-  defaultOpen: boolean;
-}
-
 export function FeedGrid({
   items,
   isLoading,
+  isLoadingMore = false,
+  hasMore = false,
+  onLoadMore,
   viewMode,
   isBookmarked,
   isRead,
@@ -45,35 +42,29 @@ export function FeedGrid({
   onOpenAddModal,
   failedSources = [],
 }: FeedGridProps) {
-  const [olderArchiveLimit, setOlderArchiveLimit] = useState(12);
-  // Default open for last 24h (Today) and last 48h (Yesterday), folded for the rest
-  const [collapsedChunks, setCollapsedChunks] = useState<Record<string, boolean>>({
-    'Earlier This Week': true,
-    'Older Archive': true,
-  });
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  const toggleChunk = (title: string) => {
-    setCollapsedChunks((prev) => ({
-      ...prev,
-      [title]: !prev[title],
-    }));
-  };
+  // Infinite Scroll Observer
+  useEffect(() => {
+    if (!loadMoreRef.current || !hasMore || isLoadingMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          onLoadMore?.();
+        }
+      },
+      { rootMargin: '400px' } // Load earlier
+    );
+    observer.observe(loadMoreRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, isLoadingMore, onLoadMore]);
 
-  // Skeleton loading state
+  // Skeleton loading state (initial load only)
   if (isLoading && items.length === 0) {
     return (
-      <div
-        className={
-          viewMode === 'grid'
-            ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5'
-            : 'space-y-4'
-        }
-      >
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div
-            key={i}
-            className="glass-panel rounded-2xl p-4 space-y-3 animate-pulse border border-white/5"
-          >
+      <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5' : 'space-y-4'}>
+        {Array.from({ length: 12 }).map((_, i) => (
+          <div key={i} className="glass-panel rounded-2xl p-4 space-y-3 animate-pulse border border-white/5">
             <div className="aspect-video w-full rounded-xl bg-slate-800/60" />
             <div className="flex items-center gap-2">
               <div className="w-5 h-5 rounded-full bg-slate-800" />
@@ -87,41 +78,14 @@ export function FeedGrid({
     );
   }
 
-  // Time-chunking partitioning (Today: < 24h, Yesterday: 24h-48h, This Week: 2-7d, Older: >7d)
   const now = Date.now();
   const dayMs = 24 * 60 * 60 * 1000;
-
-  const todayItems: FeedItem[] = [];
-  const yesterdayItems: FeedItem[] = [];
-  const thisWeekItems: FeedItem[] = [];
-  const olderItems: FeedItem[] = [];
-
-  for (const item of items) {
+  const isItemToday = (item: FeedItem) => {
     const pubTime = new Date(item.publishedAt).getTime();
-    if (isNaN(pubTime)) {
-      todayItems.push(item);
-      continue;
-    }
-    const diff = now - pubTime;
-    if (diff < dayMs) {
-      todayItems.push(item);
-    } else if (diff < dayMs * 2) {
-      yesterdayItems.push(item);
-    } else if (diff < dayMs * 7) {
-      thisWeekItems.push(item);
-    } else {
-      olderItems.push(item);
-    }
-  }
+    return isNaN(pubTime) || now - pubTime < dayMs;
+  };
 
-  const chunks: TimeChunk[] = [
-    { title: 'Today', subtitle: 'Past 24 Hours', items: todayItems, isToday: true, defaultOpen: true },
-    { title: 'Yesterday', subtitle: '24-48 Hours Ago', items: yesterdayItems, defaultOpen: true },
-    { title: 'Earlier This Week', subtitle: 'Last 7 Days', items: thisWeekItems, defaultOpen: false },
-    { title: 'Older Archive', subtitle: 'Previous Stories', items: olderItems, isOlder: true, defaultOpen: false },
-  ].filter((chunk) => chunk.items.length > 0);
-
-  const totalChunks = chunks.length;
+  let todayCount = items.filter(isItemToday).length;
 
   return (
     <div className="space-y-8">
@@ -167,96 +131,32 @@ export function FeedGrid({
           </div>
         </div>
       ) : (
-        chunks.map((chunk, chunkIndex) => {
-          const isCollapsed = Boolean(collapsedChunks[chunk.title]);
+        <>
+          <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5' : 'space-y-4'}>
+            {items.map((item, i) => {
+              const today = isItemToday(item);
+              const nextItem = items[i + 1];
+              const nextIsToday = nextItem ? isItemToday(nextItem) : false;
+              
+              // Show the divider if this item is today, and the next is not,
+              // OR this is the last item, it is today, and there's no more to load.
+              const showCaughtUp = today && !nextIsToday && (nextItem || !hasMore);
 
-          return (
-            <section key={chunk.title} className="space-y-4">
-              {/* Collapsible Time Chunk Header */}
-              <div className="flex items-center justify-between pb-2 border-b border-white/5">
-                <button
-                  type="button"
-                  onClick={() => toggleChunk(chunk.title)}
-                  className="flex items-center gap-2 group text-left transition-colors focus:outline-none"
-                >
-                  <div className="p-1 rounded-lg bg-slate-800/80 group-hover:bg-cyan-600/20 text-slate-400 group-hover:text-cyan-300 transition-colors">
-                    {isCollapsed ? (
-                      <ChevronRight className="w-4 h-4" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4" />
-                    )}
-                  </div>
-                  <Calendar className="w-4 h-4 text-cyan-400" />
-                  <h3 className="text-sm font-bold text-white tracking-wide uppercase group-hover:text-cyan-300 transition-colors">
-                    {chunk.title}
-                  </h3>
-                  <span className="text-xs text-slate-400 font-mono">
-                    ({chunk.items.length} {chunk.items.length === 1 ? 'item' : 'items'})
-                  </span>
-                  {chunk.subtitle && (
-                    <span className="text-[11px] text-slate-500 hidden sm:inline ml-2">
-                      {chunk.subtitle}
-                    </span>
-                  )}
-                  {isCollapsed && (
-                    <span className="px-2 py-0.5 rounded-md bg-slate-800 text-[10px] text-slate-400 font-medium ml-1">
-                      Folded &bull; Click to load
-                    </span>
-                  )}
-                </button>
-
-                {!isCollapsed && onMarkAllAsRead && (
-                  <button
-                    onClick={() => onMarkAllAsRead(chunk.items.map((i) => i.id))}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition-colors"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    Mark as Read
-                  </button>
-                )}
-              </div>
-
-              {/* Lazy-loaded Grid / List: only renders DOM when expanded */}
-              {!isCollapsed && (
-                <>
-                  <div
-                    className={
-                      viewMode === 'grid'
-                        ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5'
-                        : 'space-y-4'
-                    }
-                  >
-                    {(chunk.isOlder ? chunk.items.slice(0, olderArchiveLimit) : chunk.items).map((item) => (
-                      <FeedCard
-                        key={item.id}
-                        item={item}
-                        viewMode={viewMode}
-                        isBookmarked={isBookmarked(item.id)}
-                        isRead={isRead(item.id)}
-                        onToggleBookmark={onToggleBookmark}
-                        onToggleRead={onToggleRead}
-                        onOpenVideo={onOpenVideo}
-                        onOpenReader={onOpenReader}
-                        onOpenPodcast={onOpenPodcast}
-                      />
-                    ))}
-                  </div>
-
-                  {/* Load More Button for Older Archive */}
-                  {chunk.isOlder && chunk.items.length > olderArchiveLimit && (
-                    <div className="pt-4 flex justify-center">
-                      <button
-                        onClick={() => setOlderArchiveLimit((prev) => prev + 12)}
-                        className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/10 text-sm font-medium text-slate-200 transition-all shadow-md"
-                      >
-                        Load More Archive
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Caught-Up Divider for Today Section */}
-                  {chunk.isToday && (
-                    <div className="pt-4">
+              return (
+                <React.Fragment key={item.id}>
+                  <FeedCard
+                    item={item}
+                    viewMode={viewMode}
+                    isBookmarked={isBookmarked(item.id)}
+                    isRead={isRead(item.id)}
+                    onToggleBookmark={onToggleBookmark}
+                    onToggleRead={onToggleRead}
+                    onOpenVideo={onOpenVideo}
+                    onOpenReader={onOpenReader}
+                    onOpenPodcast={onOpenPodcast}
+                  />
+                  {showCaughtUp && (
+                    <div className="col-span-full pt-6 pb-2">
                       <div className="glass-panel rounded-2xl p-4 sm:p-5 text-center border border-cyan-500/20 bg-cyan-950/20 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg shadow-cyan-950/30">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center shrink-0">
@@ -265,23 +165,39 @@ export function FeedGrid({
                           <div className="text-left">
                             <h4 className="text-sm font-semibold text-slate-100">You're all caught up for Today</h4>
                             <p className="text-xs text-slate-400">
-                              {chunk.items.length} fresh stories reviewed from the past 24 hours.
+                              {todayCount} fresh stories reviewed from the past 24 hours.
                             </p>
                           </div>
                         </div>
-                        {totalChunks > 1 && chunkIndex === 0 && (
+                        {hasMore || items.length > todayCount ? (
                           <span className="text-xs text-slate-400 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-white/5">
                             Earlier content below &darr;
                           </span>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   )}
-                </>
+                </React.Fragment>
+              );
+            })}
+          </div>
+          
+          {/* Infinite Scroll Trigger */}
+          {hasMore && (
+            <div ref={loadMoreRef} className="col-span-full flex justify-center py-8">
+              {isLoadingMore ? (
+                <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <button 
+                  onClick={() => onLoadMore?.()}
+                  className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/10 text-sm font-medium text-slate-200 transition-all shadow-md"
+                >
+                  Load More
+                </button>
               )}
-            </section>
-          );
-        })
+            </div>
+          )}
+        </>
       )}
     </div>
   );
