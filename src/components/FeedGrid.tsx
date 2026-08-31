@@ -44,20 +44,8 @@ export function FeedGrid({
 }: FeedGridProps) {
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // Infinite Scroll Observer
-  useEffect(() => {
-    if (!loadMoreRef.current || !hasMore || isLoadingMore) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          onLoadMore?.();
-        }
-      },
-      { rootMargin: '400px' } // Load earlier
-    );
-    observer.observe(loadMoreRef.current);
-    return () => observer.disconnect();
-  }, [hasMore, isLoadingMore, onLoadMore]);
+  // Removed auto-infinite scroll so we don't aggressively fill the grid
+  // Users will click "Load More" manually if they want older content.
 
   // Skeleton loading state (initial load only)
   if (isLoading && items.length === 0) {

@@ -59,66 +59,86 @@ export async function GET(request: NextRequest) {
   const cursor = searchParams.get('cursor');
 
   try {
-    const activeSourcesArray = Array.from(activeSourceIds);
-    // Firestore limits `in` queries to 30 values
-    const chunkSize = 30;
-    const batches = [];
-    for (let i = 0; i < activeSourcesArray.length; i += chunkSize) {
-      batches.push(activeSourcesArray.slice(i, i + chunkSize));
-    }
-
-    const LIMIT = 50;
+    const TARGET_ITEMS = 12; // Reduced from 25.
+    const MAX_LOOPS = 5; // Safety limit: max 5 queries per request (max 250 reads)
     
-    // Fetch from all batches in parallel
-    const snapshotPromises = batches.map(batch => {
+    let validItems: FeedItem[] = [];
+    let currentCursor = cursor;
+    let loops = 0;
+    let hasMoreInDb = true;
+
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
+    let crossed24h = false;
+
+    while (validItems.length < TARGET_ITEMS && loops < MAX_LOOPS && hasMoreInDb && !crossed24h) {
+      // Query global feed ordered by date
       let query = db.collection('feed_items')
-        .where('sourceId', 'in', batch)
         .orderBy('publishedAt', 'desc')
-        .limit(LIMIT);
+        .limit(50); // Read 50 at a time
+        
+      if (currentCursor) {
+        query = query.startAfter(currentCursor);
+      }
+
+      const snapshot = await query.get();
       
-      if (cursor) {
-        query = query.startAfter(cursor);
+      if (snapshot.empty) {
+        hasMoreInDb = false;
+        break;
+      }
+
+      const docs = snapshot.docs;
+      currentCursor = docs[docs.length - 1].data().publishedAt; // Advance cursor
+      
+      for (const doc of docs) {
+        const item = doc.data() as FeedItem;
+        
+        const pubTime = new Date(item.publishedAt).getTime();
+        const isToday = isNaN(pubTime) || (now - pubTime) < dayMs;
+
+        // If we cross into yesterday, and we already have some items, we can stop early
+        // so we don't aggressively dig into the past just to fill the grid.
+        if (!isToday && validItems.length > 0 && !cursor) {
+           crossed24h = true;
+           // We don't break immediately so we can finish processing this chunk
+           // but the while loop will terminate after this batch.
+        }
+
+        // 1. Check if source is active
+        if (!activeSourceIds.has(item.sourceId)) continue;
+        
+        // 2. Check mediaType filter
+        if (mediaType && mediaType !== 'all' && item.mediaType !== mediaType) continue;
+        
+        // 3. Check search filter
+        if (search) {
+          const s = search;
+          const matches = 
+            item.title.toLowerCase().includes(s) ||
+            item.summary?.toLowerCase().includes(s) ||
+            item.author.name.toLowerCase().includes(s) ||
+            item.tags.some((tag) => tag.toLowerCase().includes(s));
+          if (!matches) continue;
+        }
+
+        validItems.push({
+          ...item,
+          id: doc.id,
+        });
+        
+        if (validItems.length >= TARGET_ITEMS) break; // We have enough for this page
       }
       
-      return query.get();
-    });
-
-    const snapshots = await Promise.all(snapshotPromises);
-    
-    let items: FeedItem[] = [];
-    snapshots.forEach(snapshot => {
-      snapshot.forEach(doc => {
-        items.push(doc.data() as FeedItem);
-      });
-    });
-
-    // Merge and sort
-    items.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
-    
-    // Take top LIMIT items
-    items = items.slice(0, LIMIT);
-
-    let nextCursor = items.length === LIMIT ? items[items.length - 1].publishedAt : null;
-
-    // Apply late-stage filters (search, mediaType)
-    if (mediaType && mediaType !== 'all') {
-      items = items.filter((item) => item.mediaType === mediaType);
+      loops++;
     }
 
-    if (search) {
-      items = items.filter(
-        (item) =>
-          item.title.toLowerCase().includes(search) ||
-          item.summary?.toLowerCase().includes(search) ||
-          item.author.name.toLowerCase().includes(search) ||
-          item.tags.some((tag) => tag.toLowerCase().includes(search))
-      );
-    }
+    const nextCursor = (hasMoreInDb && validItems.length > 0) ? currentCursor : null;
 
     return NextResponse.json({
       success: true,
-      count: items.length,
-      items: items,
+      count: validItems.length,
+      items: validItems,
       nextCursor,
       sourcesCount: activeSourceIds.size,
       failedSources: [],
