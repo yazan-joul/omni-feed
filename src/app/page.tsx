@@ -13,7 +13,7 @@ import { useBookmarks } from '@/lib/hooks/useBookmarks';
 import { useCustomSources } from '@/lib/hooks/useCustomSources';
 import { DEFAULT_FEED_SOURCES } from '@/lib/config/default-sources';
 import { FeedItem, ContentPlatform, MediaType, TimeRange } from '@/lib/types';
-import { Bookmark } from 'lucide-react';
+import { Bookmark, Loader2 } from 'lucide-react';
 
 export default function HomePage() {
   // Navigation tabs
@@ -379,6 +379,18 @@ export default function HomePage() {
         )}
 
         {/* Feed Cards Grid / List View */}
+        {isSyncing && (
+          <div className="mb-6 p-4 rounded-2xl bg-cyan-950/40 border border-cyan-500/30 flex items-center gap-3 text-cyan-200 shadow-lg shadow-cyan-950/20">
+            <div className="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center shrink-0">
+              <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
+            </div>
+            <div className="space-y-0.5">
+               <p className="text-sm font-semibold text-cyan-300">Scraping Live Data...</p>
+               <p className="text-xs opacity-90">Please wait while we connect to social platforms and fetch the latest content. This can take up to 30 seconds for heavy sources like Instagram.</p>
+            </div>
+          </div>
+        )}
+
         <FeedGrid
           items={displayedItems}
           isLoading={isLoading}
