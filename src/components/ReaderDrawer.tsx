@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { FeedItem } from '@/lib/types';
 import { formatDistanceToNow } from 'date-fns';
+import DOMPurify from 'dompurify';
 
 interface ReaderDrawerProps {
   item: FeedItem | null;
@@ -306,7 +307,7 @@ export function ReaderDrawer({
               item.content.includes('<') ? (
                 <div
                   className="prose prose-invert max-w-none space-y-4"
-                  dangerouslySetInnerHTML={{ __html: item.content }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.content) }}
                 />
               ) : (
                 <div className="text-slate-200 whitespace-pre-line leading-relaxed">

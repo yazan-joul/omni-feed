@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { FeedItem } from '../types';
 
 export function useBookmarks() {
@@ -43,13 +43,13 @@ export function useBookmarks() {
     });
   };
 
-  const isBookmarked = (id: string): boolean => {
+  const isBookmarked = useCallback((id: string): boolean => {
     return bookmarks.some((b) => b.id === id);
-  };
+  }, [bookmarks]);
 
   const markAsRead = (id: string) => {
     if (readIds.includes(id)) return;
-    const updated = [...readIds, id];
+    const updated = [...readIds, id].slice(-2000); // keep last 2000
     setReadIds(updated);
     try {
       localStorage.setItem('omnifeed_read_ids', JSON.stringify(updated));
@@ -87,9 +87,9 @@ export function useBookmarks() {
     } catch {}
   };
 
-  const isRead = (id: string): boolean => {
+  const isRead = useCallback((id: string): boolean => {
     return readIds.includes(id);
-  };
+  }, [readIds]);
 
   return {
     bookmarks,

@@ -98,6 +98,9 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources, ex
       if (data.success && data.platform) {
         setPlatform(data.platform as ContentPlatform);
       }
+      if (data.success && data.title && !name.trim()) {
+        setName(data.title);
+      }
       return data;
     } catch (err) {
       setValidationResult({ valid: false, error: 'Validation request failed.' });
