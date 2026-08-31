@@ -1,6 +1,29 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 
+function parseServiceAccount(rawInput: string) {
+  let raw = rawInput.trim();
+  for (let i = 0; i < 3; i++) {
+    if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed === 'string') {
+          raw = parsed.trim();
+        } else {
+          return parsed;
+        }
+      } catch {
+        raw = raw.replace(/^["']+|["']+$/g, '').trim();
+      }
+    }
+  }
+  const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  if (parsed && typeof parsed === 'object' && parsed.private_key) {
+    parsed.private_key = parsed.private_key.replace(/\\n/g, '\n');
+  }
+  return parsed;
+}
+
 function initFirebase() {
   if (!getApps().length) {
     const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
@@ -9,16 +32,7 @@ function initFirebase() {
       return null;
     }
     try {
-      let raw = serviceAccountJson.trim();
-      if (raw.startsWith('"') && raw.endsWith('"')) {
-        try {
-          raw = JSON.parse(raw);
-        } catch {}
-      }
-      const serviceAccount = typeof raw === 'string' ? JSON.parse(raw) : raw;
-      if (serviceAccount.private_key) {
-        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
-      }
+      const serviceAccount = parseServiceAccount(serviceAccountJson);
       
       const app = initializeApp({
         credential: cert(serviceAccount)
