@@ -104,6 +104,15 @@ export function FeedCard({
 
   const isVideo = item.mediaType === 'video';
   const isPodcast = item.mediaType === 'podcast';
+  
+  const getImageUrl = (url?: string | null) => {
+    if (!url) return undefined;
+    if (url.includes('cdninstagram.com') || url.includes('fbcdn.net')) {
+      return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
+    }
+    return url;
+  };
+
   const shouldUsePodcastFallback = isPodcast && (!item.thumbnailUrl || imageFailed);
   const shouldRenderThumbnail = Boolean(item.thumbnailUrl) && !imageFailed;
   const formattedDuration =
@@ -139,7 +148,7 @@ export function FeedCard({
               {shouldRenderThumbnail ? (
                 <>
                   <img
-                    src={item.thumbnailUrl}
+                    src={getImageUrl(item.thumbnailUrl)}
                     alt={item.title}
                     onError={() => setImageFailed(true)}
                     className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-300"
@@ -298,7 +307,7 @@ export function FeedCard({
           {shouldRenderThumbnail ? (
             <>
               <img
-                src={item.thumbnailUrl}
+                src={getImageUrl(item.thumbnailUrl)}
                 alt={item.title}
                 onError={() => setImageFailed(true)}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -397,7 +406,7 @@ export function FeedCard({
             <div className="flex items-center gap-2 min-w-0">
               {item.author.avatarUrl ? (
                 <img
-                  src={item.author.avatarUrl}
+                  src={getImageUrl(item.author.avatarUrl)}
                   alt={item.author.name}
                   className="w-5 h-5 rounded-full object-cover"
                 />

@@ -59,6 +59,15 @@ export function ReaderDrawer({
 
   const isPodcast = item.mediaType === 'podcast';
 
+  const getImageUrl = (url?: string | null) => {
+    if (!url) return undefined;
+    if (url.includes('cdninstagram.com') || url.includes('fbcdn.net')) {
+      return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
+    }
+    return url;
+  };
+
+
   const handleShare = () => {
     navigator.clipboard.writeText(item.url);
     setCopied(true);
@@ -183,7 +192,7 @@ export function ReaderDrawer({
           {/* Cover Photo or Podcast Hero */}
           {item.thumbnailUrl ? (
             <div className="relative aspect-video w-full rounded-2xl overflow-hidden shadow-lg border border-white/10 group">
-              <img src={item.thumbnailUrl} alt={item.title} className="w-full h-full object-cover" />
+              <img src={getImageUrl(item.thumbnailUrl)} alt={item.title} className="w-full h-full object-cover" />
               {isPodcast && onPlayPodcast && (
                 <div
                   onClick={() => onPlayPodcast(item)}
@@ -269,7 +278,7 @@ export function ReaderDrawer({
             <div className="flex items-center gap-3 pt-2">
               {item.author.avatarUrl ? (
                 <img
-                  src={item.author.avatarUrl}
+                  src={getImageUrl(item.author.avatarUrl)}
                   alt={item.author.name}
                   className="w-8 h-8 rounded-full object-cover border border-white/10"
                 />

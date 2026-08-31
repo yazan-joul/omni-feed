@@ -29,6 +29,15 @@ export function BottomAudioPlayer({ item, isOpen, onClose }: BottomAudioPlayerPr
   const [volume, setVolume] = useState(0.8);
   const [hasError, setHasError] = useState(false);
 
+  const getImageUrl = (url?: string | null) => {
+    if (!url) return undefined;
+    if (url.includes('cdninstagram.com') || url.includes('fbcdn.net')) {
+      return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
+    }
+    return url;
+  };
+
+
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -124,7 +133,7 @@ export function BottomAudioPlayer({ item, isOpen, onClose }: BottomAudioPlayerPr
             <div className="flex min-w-0 items-center gap-3">
               {item.thumbnailUrl ? (
                 <img
-                  src={item.thumbnailUrl}
+                  src={getImageUrl(item.thumbnailUrl)}
                   alt={item.title}
                   className="h-14 w-14 shrink-0 rounded-xl object-cover border border-white/10 bg-slate-950"
                 />
