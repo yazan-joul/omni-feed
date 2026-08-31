@@ -47,9 +47,11 @@ export function useCustomSources() {
       } else {
         localStorage.setItem('omnifeed_sources', JSON.stringify(newSources));
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("Error saving sources", e);
-      if (!user) {
+      if (e?.code === 'resource-exhausted' || e?.message?.includes('Quota')) {
+        alert("Firebase daily quota reached! Data will be saved locally and won't sync to the cloud until tomorrow.");
+      } else if (!user) {
         alert("Local storage is full. Please login to save more sources to the cloud.");
       }
     }

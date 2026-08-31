@@ -47,8 +47,15 @@ export function useBookmarks() {
   // Sync to appropriate storage
   const syncBookmarks = async (newBookmarks: FeedItem[]) => {
     if (user && dbClient) {
-      const userRef = doc(dbClient, 'users', user.uid);
-      await setDoc(userRef, { bookmarks: newBookmarks }, { merge: true });
+      try {
+        const userRef = doc(dbClient, 'users', user.uid);
+        await setDoc(userRef, { bookmarks: newBookmarks }, { merge: true });
+      } catch (e: any) {
+        console.error("Error syncing bookmarks:", e);
+        if (e?.code === 'resource-exhausted' || e?.message?.includes('Quota')) {
+          alert("Firebase daily quota reached! Bookmark saved locally.");
+        }
+      }
     } else {
       localStorage.setItem('omnifeed_bookmarks', JSON.stringify(newBookmarks));
     }
@@ -56,8 +63,12 @@ export function useBookmarks() {
 
   const syncReadIds = async (newReadIds: string[]) => {
     if (user && dbClient) {
-      const userRef = doc(dbClient, 'users', user.uid);
-      await setDoc(userRef, { readIds: newReadIds }, { merge: true });
+      try {
+        const userRef = doc(dbClient, 'users', user.uid);
+        await setDoc(userRef, { readIds: newReadIds }, { merge: true });
+      } catch (e: any) {
+        console.error("Error syncing read status:", e);
+      }
     } else {
       localStorage.setItem('omnifeed_read_ids', JSON.stringify(newReadIds));
     }
