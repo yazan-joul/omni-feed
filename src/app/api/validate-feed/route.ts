@@ -73,6 +73,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // --- 0.5 iTunes Podcast Search (if input is likely a search query and not a URL) ---
+    if (!rawInput.includes('.') && !rawInput.startsWith('@') && !rawInput.startsWith('r/') && !rawInput.startsWith('/r/')) {
+      try {
+        const searchUrl = `https://itunes.apple.com/search?media=podcast&term=${encodeURIComponent(rawInput)}&limit=1`;
+        const res = await fetch(searchUrl, { signal: AbortSignal.timeout(4000) });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.results && data.results.length > 0) {
+            const podcast = data.results[0];
+            if (podcast.feedUrl) {
+              return NextResponse.json({
+                success: true,
+                platform: 'rss',
+                title: podcast.collectionName,
+                description: podcast.artistName ? `Podcast by ${podcast.artistName}` : 'Podcast',
+                url: podcast.feedUrl,
+              });
+            }
+          }
+        }
+      } catch (e) {
+        // Fall through
+      }
+    }
+
     // --- 1. Handle Reddit Subreddit formats (r/LocalLLaMA, reddit.com/r/..., or /r/...) ---
     if (rawInput.startsWith('r/') || rawInput.startsWith('/r/') || rawInput.includes('reddit.com/r/')) {
       const match = rawInput.match(/(?:reddit\.com)?\/?r\/([a-zA-Z0-9_]+)/i);
@@ -177,21 +202,10 @@ export async function POST(request: NextRequest) {
     }
 
     // --- 7. Generic Web / RSS Fallback ---
-    try {
-      const domain = new URL(targetUrl).hostname.replace('www.', '');
-      return NextResponse.json({
-        success: true,
-        platform: 'rss',
-        title: `${domain.charAt(0).toUpperCase() + domain.slice(1)} Feed`,
-        description: `Stream from ${domain}`,
-        url: targetUrl,
-      });
-    } catch {
-      return NextResponse.json(
-        { success: false, error: 'Could not validate this link. Please check the spelling or format.' },
-        { status: 422 }
-      );
-    }
+    return NextResponse.json(
+      { success: false, error: 'Could not find a valid RSS feed, YouTube channel, or supported social profile for this link.' },
+      { status: 422 }
+    );
   } catch (err: any) {
     return NextResponse.json(
       { success: false, error: err.message || 'Validation failed.' },
