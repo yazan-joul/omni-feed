@@ -5,7 +5,37 @@ import { DEFAULT_FEED_SOURCES } from '@/lib/config/default-sources';
 import { FALLBACK_FEED_ITEMS } from '@/lib/mock-data';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 60; // Cache for 60 seconds
+
+// Global Cache State (persists perfectly in long-running Node processes like Railway)
+let globalFeedCache: FeedItem[] | null = null;
+let lastCacheTime = 0;
+let isRefreshing = false;
+const CACHE_TTL = 3 * 60 * 1000; // 3 minutes
+const CACHE_SIZE = 300; // Hold the top 300 recent items in memory for instant filtering
+
+async function refreshCache() {
+  if (isRefreshing) return;
+  isRefreshing = true;
+  try {
+    const snapshot = await db.collection('feed_items')
+      .orderBy('publishedAt', 'desc')
+      .limit(CACHE_SIZE)
+      .get();
+
+    const items: FeedItem[] = [];
+    snapshot.forEach((doc) => {
+      items.push({ id: doc.id, ...doc.data() } as FeedItem);
+    });
+
+    globalFeedCache = items;
+    lastCacheTime = Date.now();
+    console.log(`[Cache] Background refresh complete. Loaded ${items.length} items.`);
+  } catch (error) {
+    console.error('[Cache] Failed to refresh:', error);
+  } finally {
+    isRefreshing = false;
+  }
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -57,25 +87,79 @@ export async function GET(request: NextRequest) {
   }
 
   const cursor = searchParams.get('cursor');
+  const forceRefresh = searchParams.get('forceRefresh') === 'true';
 
   try {
-    const TARGET_ITEMS = 12; // Reduced from 25.
-    const MAX_LOOPS = 5; // Safety limit: max 5 queries per request (max 250 reads)
+    const TARGET_ITEMS = 12; 
     
+    // ==========================================
+    // FAST PATH: Initial Load (No Cursor) -> Memory Cache
+    // ==========================================
+    if (!cursor) {
+      if (!globalFeedCache || forceRefresh) {
+        // Block and fetch if cache is totally empty or forced
+        await refreshCache();
+      } else if (Date.now() - lastCacheTime > CACHE_TTL) {
+        // Stale-While-Revalidate: Trigger background refresh without blocking user
+        refreshCache();
+      }
+
+      if (globalFeedCache) {
+        const validItems: FeedItem[] = [];
+        const now = Date.now();
+        const dayMs = 24 * 60 * 60 * 1000;
+        let crossed24h = false;
+
+        for (const item of globalFeedCache) {
+          const pubTime = new Date(item.publishedAt).getTime();
+          const isToday = isNaN(pubTime) || (now - pubTime) < dayMs;
+
+          if (!isToday && validItems.length > 0) {
+            crossed24h = true;
+          }
+
+          if (!activeSourceIds.has(item.sourceId)) continue;
+          if (mediaType && mediaType !== 'all' && item.mediaType !== mediaType) continue;
+          if (search) {
+            const matches = 
+              item.title.toLowerCase().includes(search) ||
+              item.summary?.toLowerCase().includes(search) ||
+              item.author.name.toLowerCase().includes(search) ||
+              item.tags.some((tag) => tag.toLowerCase().includes(search));
+            if (!matches) continue;
+          }
+
+          validItems.push(item);
+          if (validItems.length >= TARGET_ITEMS) break; 
+        }
+
+        // The cursor for the next fetch is just the timestamp of the last item we pulled from cache
+        const nextCursor = validItems.length > 0 ? validItems[validItems.length - 1].publishedAt : null;
+
+        return NextResponse.json({
+          success: true,
+          count: validItems.length,
+          items: validItems,
+          nextCursor,
+          sourcesCount: activeSourceIds.size,
+          failedSources: [],
+        });
+      }
+    }
+
+    // ==========================================
+    // DEEP PATH: Load More / Cursor -> Firestore DB
+    // ==========================================
+    const MAX_LOOPS = 5; 
     let validItems: FeedItem[] = [];
     let currentCursor = cursor;
     let loops = 0;
     let hasMoreInDb = true;
 
-    const now = Date.now();
-    const dayMs = 24 * 60 * 60 * 1000;
-    let crossed24h = false;
-
-    while (validItems.length < TARGET_ITEMS && loops < MAX_LOOPS && hasMoreInDb && !crossed24h) {
-      // Query global feed ordered by date
+    while (validItems.length < TARGET_ITEMS && loops < MAX_LOOPS && hasMoreInDb) {
       let query = db.collection('feed_items')
         .orderBy('publishedAt', 'desc')
-        .limit(50); // Read 50 at a time
+        .limit(50);
         
       if (currentCursor) {
         query = query.startAfter(currentCursor);
@@ -89,29 +173,13 @@ export async function GET(request: NextRequest) {
       }
 
       const docs = snapshot.docs;
-      currentCursor = docs[docs.length - 1].data().publishedAt; // Advance cursor
+      currentCursor = docs[docs.length - 1].data().publishedAt;
       
       for (const doc of docs) {
         const item = doc.data() as FeedItem;
         
-        const pubTime = new Date(item.publishedAt).getTime();
-        const isToday = isNaN(pubTime) || (now - pubTime) < dayMs;
-
-        // If we cross into yesterday, and we already have some items, we can stop early
-        // so we don't aggressively dig into the past just to fill the grid.
-        if (!isToday && validItems.length > 0 && !cursor) {
-           crossed24h = true;
-           // We don't break immediately so we can finish processing this chunk
-           // but the while loop will terminate after this batch.
-        }
-
-        // 1. Check if source is active
         if (!activeSourceIds.has(item.sourceId)) continue;
-        
-        // 2. Check mediaType filter
         if (mediaType && mediaType !== 'all' && item.mediaType !== mediaType) continue;
-        
-        // 3. Check search filter
         if (search) {
           const s = search;
           const matches = 
@@ -122,14 +190,9 @@ export async function GET(request: NextRequest) {
           if (!matches) continue;
         }
 
-        validItems.push({
-          ...item,
-          id: doc.id,
-        });
-        
-        if (validItems.length >= TARGET_ITEMS) break; // We have enough for this page
+        validItems.push({ ...item, id: doc.id });
+        if (validItems.length >= TARGET_ITEMS) break; 
       }
-      
       loops++;
     }
 
@@ -145,31 +208,10 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Error fetching from Firestore, falling back to cached items:', error?.message || error);
-    
-    let fallbackItems = [...FALLBACK_FEED_ITEMS];
-    if (platform && platform !== 'all' && platform !== 'All') {
-      fallbackItems = fallbackItems.filter((item) => item.platform.toLowerCase() === platform.toLowerCase());
-    }
-    if (mediaType && mediaType !== 'all') {
-      fallbackItems = fallbackItems.filter((item) => item.mediaType === mediaType);
-    }
-    if (search) {
-      fallbackItems = fallbackItems.filter(
-        (item) =>
-          item.title.toLowerCase().includes(search) ||
-          item.summary?.toLowerCase().includes(search) ||
-          item.author.name.toLowerCase().includes(search) ||
-          item.tags.some((tag) => tag.toLowerCase().includes(search))
-      );
-    }
-
     return NextResponse.json({
-      success: true,
-      count: fallbackItems.length,
-      items: fallbackItems,
-      nextCursor: null,
-      sourcesCount: activeSourceIds.size,
-      failedSources: [],
+      success: false,
+      error: 'Failed to fetch items',
+      items: []
     });
   }
 }
