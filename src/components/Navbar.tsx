@@ -19,6 +19,8 @@ interface NavbarProps {
   onOpenSourcesModal: () => void;
 }
 
+import { useAuth } from '@/lib/hooks/useAuth';
+
 export function Navbar({
   activeTab,
   setActiveTab,
@@ -27,6 +29,8 @@ export function Navbar({
   onOpenAddModal,
   onOpenSourcesModal,
 }: NavbarProps) {
+  const { user, loading, signIn, signOut } = useAuth();
+
   return (
     <header className="sticky top-0 z-40 w-full glass-panel border-b border-white/10 px-3 sm:px-4 lg:px-8 py-3 transition-colors">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
@@ -87,9 +91,6 @@ export function Navbar({
             <span className="hidden sm:inline">Add Feed</span>
           </button>
 
-          
-          
-
           {/* Manage Sources Button */}
           <button
             onClick={onOpenSourcesModal}
@@ -98,6 +99,34 @@ export function Navbar({
           >
             <SlidersHorizontal className="h-4 w-4" />
           </button>
+
+          {/* User Auth */}
+          <div className="h-6 w-px bg-white/10 mx-1 hidden sm:block"></div>
+          
+          {!loading && user ? (
+            <div className="flex items-center gap-2 ml-1 cursor-pointer group relative">
+              {user.photoURL ? (
+                <img src={user.photoURL} alt="Profile" className="w-9 h-9 rounded-full border border-white/10 object-cover" />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-cyan-900 flex items-center justify-center text-cyan-300 font-bold border border-white/10">
+                  {user.email?.charAt(0).toUpperCase()}
+                </div>
+              )}
+              {/* Simple dropdown overlay */}
+              <div className="absolute right-0 top-full mt-2 w-32 bg-slate-800 border border-white/10 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <button onClick={signOut} className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-white/5 rounded-xl transition-colors">
+                  Sign out
+                </button>
+              </div>
+            </div>
+          ) : !loading ? (
+            <button
+              onClick={signIn}
+              className="ml-1 px-3 py-1.5 rounded-xl bg-slate-800 border border-white/10 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition-colors"
+            >
+              Sign In
+            </button>
+          ) : null}
         </div>
       </div>
     </header>

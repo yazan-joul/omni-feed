@@ -11,7 +11,7 @@ let globalFeedCache: FeedItem[] | null = null;
 let lastCacheTime = 0;
 let isRefreshing = false;
 const CACHE_TTL = 3 * 60 * 1000; // 3 minutes
-const CACHE_SIZE = 500; // Hold the top 500 recent items in memory for instant filtering
+const CACHE_SIZE = parseInt(process.env.FEED_CACHE_SIZE || '500', 10); // Configurable cache size
 
 async function refreshCache() {
   if (isRefreshing) return;
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
   const forceRefresh = searchParams.get('forceRefresh') === 'true';
 
   try {
-    const TARGET_ITEMS = 12; 
+    const TARGET_ITEMS = parseInt(process.env.FEED_TARGET_ITEMS || '12', 10); 
     
     // ==========================================
     // FAST PATH: Initial Load (No Cursor) -> Memory Cache
@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
               const snap = await db.collection('feed_items')
                 .where('sourceId', '==', missingId)
                 .orderBy('publishedAt', 'desc')
-                .limit(10)
+                .limit(parseInt(process.env.FEED_CUSTOM_FETCH_LIMIT || '10', 10))
                 .get();
               snap.forEach(doc => {
                 globalFeedCache!.push({ id: doc.id, ...doc.data() } as FeedItem);
@@ -171,7 +171,7 @@ export async function GET(request: NextRequest) {
     // ==========================================
     // DEEP PATH: Load More / Cursor -> Firestore DB
     // ==========================================
-    const MAX_LOOPS = 5; 
+    const MAX_LOOPS = parseInt(process.env.FEED_MAX_DB_LOOPS || '5', 10); 
     let validItems: FeedItem[] = [];
     let currentCursor = cursor;
     let loops = 0;

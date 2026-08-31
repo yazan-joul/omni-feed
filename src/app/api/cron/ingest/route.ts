@@ -18,15 +18,31 @@ const facebookAdapter = new FacebookAdapter();
 const twitterAdapter = new TwitterAdapter();
 const redditAdapter = new RedditAdapter();
 
-const fetchWithTimeout = <T>(promise: Promise<T>, ms: number, sourceName: string): Promise<T> => {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      reject(new Error(`[Timeout] Source "${sourceName}" exceeded ${ms}ms limit.`));
-    }, ms);
-    promise
-      .then((value) => { clearTimeout(timer); resolve(value); })
-      .catch((err) => { clearTimeout(timer); reject(err); });
-  });
+const fetchWithRetry = async <T>(
+  promiseFn: () => Promise<T>,
+  ms: number,
+  sourceName: string,
+  retries = 2,
+  delay = 1000
+): Promise<T> => {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      return await new Promise<T>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          reject(new Error(`[Timeout] Source "${sourceName}" exceeded ${ms}ms limit.`));
+        }, ms);
+        promiseFn()
+          .then((value) => { clearTimeout(timer); resolve(value); })
+          .catch((err) => { clearTimeout(timer); reject(err); });
+      });
+    } catch (err: any) {
+      if (i === retries) throw err;
+      console.warn(`[Retry ${i + 1}/${retries}] Source "${sourceName}" failed: ${err.message}. Retrying in ${delay}ms...`);
+      await new Promise(res => setTimeout(res, delay));
+      delay *= 2; // Exponential backoff
+    }
+  }
+  throw new Error('Unreachable');
 };
 
 export async function POST(request: NextRequest) {
@@ -49,9 +65,24 @@ async function handleIngest(request: NextRequest) {
       if (body.customSources) {
         customSources = body.customSources;
       }
+    } else if (request.method === 'GET') {
+      // Cron job: fetch all custom sources from all users
+      const usersSnap = await db.collection('users').get();
+      const uniqueSources = new Map<string, any>();
+      usersSnap.forEach(doc => {
+        const userData = doc.data();
+        if (userData.sources && Array.isArray(userData.sources)) {
+          userData.sources.forEach(source => {
+            if (source.enabled && source.isCustom) {
+              uniqueSources.set(source.url, source);
+            }
+          });
+        }
+      });
+      customSources = Array.from(uniqueSources.values());
     }
   } catch (e) {
-    // ignore json parse error
+    // ignore json parse error or db errors
   }
   
   try {
@@ -76,12 +107,12 @@ async function handleIngest(request: NextRequest) {
         // Generous timeout for background ingestion (60 seconds for social)
         const timeoutMs = isSocial ? 60000 : 15000;
         
-        if (source.platform === 'youtube') items = await fetchWithTimeout(ytAdapter.fetchFeed(source), timeoutMs, source.name);
-        else if (source.platform === 'instagram') items = await fetchWithTimeout(instagramAdapter.fetchFeed(source), timeoutMs, source.name);
-        else if (source.platform === 'facebook') items = await fetchWithTimeout(facebookAdapter.fetchFeed(source), timeoutMs, source.name);
-        else if (source.platform === 'twitter') items = await fetchWithTimeout(twitterAdapter.fetchFeed(source), timeoutMs, source.name);
-        else if (source.platform === 'reddit') items = await fetchWithTimeout(redditAdapter.fetchFeed(source), timeoutMs, source.name);
-        else items = await fetchWithTimeout(rssAdapter.fetchFeed(source), timeoutMs, source.name);
+        if (source.platform === 'youtube') items = await fetchWithRetry(() => ytAdapter.fetchFeed(source), timeoutMs, source.name);
+        else if (source.platform === 'instagram') items = await fetchWithRetry(() => instagramAdapter.fetchFeed(source), timeoutMs, source.name);
+        else if (source.platform === 'facebook') items = await fetchWithRetry(() => facebookAdapter.fetchFeed(source), timeoutMs, source.name);
+        else if (source.platform === 'twitter') items = await fetchWithRetry(() => twitterAdapter.fetchFeed(source), timeoutMs, source.name);
+        else if (source.platform === 'reddit') items = await fetchWithRetry(() => redditAdapter.fetchFeed(source), timeoutMs, source.name);
+        else items = await fetchWithRetry(() => rssAdapter.fetchFeed(source), timeoutMs, source.name);
         
         return { sourceName: source.name, items };
       })
@@ -105,8 +136,8 @@ async function handleIngest(request: NextRequest) {
       const batch = db.batch();
       
       chunk.forEach(item => {
-        // Ensure absolute uniqueness across all platforms by injecting the item.url into the ID if it exists
-        const uniqueString = item.url ? `${item.sourceId}-${item.url}` : item.id;
+        // The adapter has already generated a deterministic unique ID for this item
+        const uniqueString = item.id;
         const safeId = Buffer.from(uniqueString).toString('base64').replace(/[/+=]/g, '_');
         
         const docRef = db.collection('feed_items').doc(safeId);

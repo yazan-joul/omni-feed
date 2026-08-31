@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { FeedItem } from '@/lib/types';
 import { formatDistanceToNow } from 'date-fns';
-import DOMPurify from 'dompurify';
+import DOMPurify from 'isomorphic-dompurify';
 
 interface ReaderDrawerProps {
   item: FeedItem | null;

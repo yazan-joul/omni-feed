@@ -121,8 +121,17 @@ export async function POST(request: NextRequest) {
 
     // --- 1. Handle Reddit ---
     if (explicitPlatform === 'reddit' || rawInput.startsWith('r/') || rawInput.startsWith('/r/') || rawInput.includes('reddit.com/r/')) {
-      const match = rawInput.match(/(?:reddit\.com)?\/?r\/([a-zA-Z0-9_]+)/i);
-      const sub = match ? match[1] : rawInput.replace(/^\/?r\//i, '').replace(/[^a-zA-Z0-9_]/g, '');
+      let sub = rawInput.replace(/^\/?r\//i, '').replace(/[^a-zA-Z0-9_]/g, '');
+      if (rawInput.includes('reddit.com')) {
+        try {
+          const url = new URL(rawInput.startsWith('http') ? rawInput : `https://${rawInput}`);
+          const parts = url.pathname.split('/').filter(Boolean);
+          if (parts[0] === 'r' && parts[1]) {
+            sub = parts[1];
+          }
+        } catch (e) {}
+      }
+      
       const normalizedUrl = `https://www.reddit.com/r/${sub}`;
 
       return NextResponse.json({
@@ -138,8 +147,15 @@ export async function POST(request: NextRequest) {
     if (explicitPlatform === 'instagram' || rawInput.includes('instagram.com') || rawInput.includes('instagr.am')) {
       let handle = rawInput;
       if (rawInput.includes('instagram.com') || rawInput.includes('instagr.am')) {
-        const match = rawInput.match(/instagr(?:am\.com|\.am)\/(?:p\/)?([a-zA-Z0-9_.]+)/i);
-        handle = match ? match[1] : 'profile';
+        try {
+          const url = new URL(rawInput.startsWith('http') ? rawInput : `https://${rawInput}`);
+          const parts = url.pathname.split('/').filter(Boolean);
+          if (parts[0] === 'p' || parts[0] === 'reel') {
+            handle = 'profile'; // Cannot trivially extract username from post URL without fetching
+          } else if (parts[0]) {
+            handle = parts[0];
+          }
+        } catch (e) {}
       } else if (handle.startsWith('@')) {
         handle = handle.slice(1);
       }
@@ -158,9 +174,14 @@ export async function POST(request: NextRequest) {
     // --- 3. Handle X / Twitter ---
     if (explicitPlatform === 'twitter' || rawInput.startsWith('@') || rawInput.includes('x.com/') || rawInput.includes('twitter.com/')) {
       let handle = rawInput;
-      if (rawInput.includes('x.com/') || rawInput.includes('twitter.com/')) {
-        const match = rawInput.match(/(?:x|twitter)\.com\/([a-zA-Z0-9_]+)/i);
-        handle = match ? match[1] : rawInput;
+      if (rawInput.includes('x.com') || rawInput.includes('twitter.com')) {
+        try {
+          const url = new URL(rawInput.startsWith('http') ? rawInput : `https://${rawInput}`);
+          const parts = url.pathname.split('/').filter(Boolean);
+          if (parts[0] && !['home', 'explore', 'notifications', 'messages'].includes(parts[0])) {
+            handle = parts[0];
+          }
+        } catch (e) {}
       } else if (handle.startsWith('@')) {
         handle = handle.slice(1);
       }
@@ -179,8 +200,15 @@ export async function POST(request: NextRequest) {
     if (explicitPlatform === 'facebook' || rawInput.includes('facebook.com') || rawInput.includes('fb.me')) {
       let handle = rawInput;
       if (rawInput.includes('facebook.com') || rawInput.includes('fb.me')) {
-        const match = rawInput.match(/facebook\.com\/([a-zA-Z0-9_.-]+)/i);
-        handle = match ? match[1] : 'page';
+        try {
+          const url = new URL(rawInput.startsWith('http') ? rawInput : `https://${rawInput}`);
+          if (url.pathname.includes('profile.php')) {
+            handle = url.searchParams.get('id') || 'page';
+          } else {
+            const parts = url.pathname.split('/').filter(Boolean);
+            if (parts[0]) handle = parts[0];
+          }
+        } catch (e) {}
       } else if (handle.startsWith('@')) {
         handle = handle.slice(1);
       }

@@ -3,29 +3,56 @@
 import { useState, useEffect, useMemo } from 'react';
 import { FeedSource } from '../types';
 import { DEFAULT_FEED_SOURCES } from '../config/default-sources';
+import { useAuth } from './useAuth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { dbClient } from '../firebase/client';
 
 export function useCustomSources() {
+  const { user } = useAuth();
   const [sources, setSources] = useState<FeedSource[]>(DEFAULT_FEED_SOURCES);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    try {
-      const savedSources = localStorage.getItem('omnifeed_sources');
-      if (savedSources) {
-        const parsed = JSON.parse(savedSources);
-        if (Array.isArray(parsed)) {
-          setSources(parsed);
+    const loadData = async () => {
+      try {
+        if (user && dbClient) {
+          const userRef = doc(dbClient, 'users', user.uid);
+          const snap = await getDoc(userRef);
+          if (snap.exists() && snap.data().sources) {
+            setSources(snap.data().sources);
+          }
+        } else {
+          const savedSources = localStorage.getItem('omnifeed_sources');
+          if (savedSources) {
+            const parsed = JSON.parse(savedSources);
+            if (Array.isArray(parsed)) {
+              setSources(parsed);
+            }
+          }
         }
+      } catch (e) {
+        console.error("Error loading sources", e);
       }
-    } catch {}
-    setMounted(true);
-  }, []);
+      setMounted(true);
+    };
+    loadData();
+  }, [user]);
 
-  const saveSources = (newSources: FeedSource[]) => {
+  const saveSources = async (newSources: FeedSource[]) => {
     setSources(newSources);
     try {
-      localStorage.setItem('omnifeed_sources', JSON.stringify(newSources));
-    } catch {}
+      if (user && dbClient) {
+        const userRef = doc(dbClient, 'users', user.uid);
+        await setDoc(userRef, { sources: newSources }, { merge: true });
+      } else {
+        localStorage.setItem('omnifeed_sources', JSON.stringify(newSources));
+      }
+    } catch (e) {
+      console.error("Error saving sources", e);
+      if (!user) {
+        alert("Local storage is full. Please login to save more sources to the cloud.");
+      }
+    }
   };
 
   const addSource = (newSource: FeedSource) => {
