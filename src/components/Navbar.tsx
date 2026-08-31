@@ -2,11 +2,10 @@
 
 import React from 'react';
 import {
-  Rss,
+  Layers,
   Bookmark,
   Plus,
   SlidersHorizontal,
-  Github,
   Radio,
   Sparkles,
 } from 'lucide-react';
@@ -18,8 +17,6 @@ interface NavbarProps {
   sourcesCount: number;
   onOpenAddModal: () => void;
   onOpenSourcesModal: () => void;
-  isDarkMode?: boolean;
-  onToggleTheme?: () => void;
 }
 
 export function Navbar({
@@ -29,8 +26,6 @@ export function Navbar({
   sourcesCount,
   onOpenAddModal,
   onOpenSourcesModal,
-  isDarkMode,
-  onToggleTheme,
 }: NavbarProps) {
   return (
     <header className="sticky top-0 z-40 w-full glass-panel border-b border-white/10 px-3 sm:px-4 lg:px-8 py-3 transition-colors">
@@ -38,7 +33,7 @@ export function Navbar({
         {/* Left: Brand / Logo */}
         <div className="flex min-w-0 flex-1 items-center gap-3 sm:flex-initial cursor-pointer" onClick={() => setActiveTab('feed')}>
           <div className="h-10 w-10 shrink-0 rounded-xl bg-gradient-to-br from-cyan-500 via-teal-600 to-emerald-600 flex items-center justify-center shadow-lg shadow-cyan-500/25">
-            <Rss className="w-5 h-5 text-white" />
+            <Layers className="w-5 h-5 text-white" />
           </div>
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-2">

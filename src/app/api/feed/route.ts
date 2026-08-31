@@ -11,7 +11,7 @@ let globalFeedCache: FeedItem[] | null = null;
 let lastCacheTime = 0;
 let isRefreshing = false;
 const CACHE_TTL = 3 * 60 * 1000; // 3 minutes
-const CACHE_SIZE = 300; // Hold the top 300 recent items in memory for instant filtering
+const CACHE_SIZE = 500; // Hold the top 500 recent items in memory for instant filtering
 
 async function refreshCache() {
   if (isRefreshing) return;
@@ -105,19 +105,33 @@ export async function GET(request: NextRequest) {
       }
 
       if (globalFeedCache) {
+        // First check which custom source IDs actually have items in cache
+        const cachedSourceIds = new Set(globalFeedCache.map(i => i.sourceId));
+        const missingCustomIds = [...activeSourceIds].filter(id => 
+          id.startsWith('custom-') && !cachedSourceIds.has(id)
+        );
+        
+        // If any custom sources have no items in cache, fetch them directly from Firestore
+        if (missingCustomIds.length > 0) {
+          try {
+            for (const missingId of missingCustomIds) {
+              const snap = await db.collection('feed_items')
+                .where('sourceId', '==', missingId)
+                .orderBy('publishedAt', 'desc')
+                .limit(10)
+                .get();
+              snap.forEach(doc => {
+                globalFeedCache!.unshift({ id: doc.id, ...doc.data() } as FeedItem);
+              });
+            }
+          } catch (e) {
+            console.warn('[Feed] Failed to fetch missing custom source items:', e);
+          }
+        }
+
         const validItems: FeedItem[] = [];
-        const now = Date.now();
-        const dayMs = 24 * 60 * 60 * 1000;
-        let crossed24h = false;
 
         for (const item of globalFeedCache) {
-          const pubTime = new Date(item.publishedAt).getTime();
-          const isToday = isNaN(pubTime) || (now - pubTime) < dayMs;
-
-          if (!isToday && validItems.length > 0) {
-            crossed24h = true;
-          }
-
           if (!activeSourceIds.has(item.sourceId)) continue;
           if (mediaType && mediaType !== 'all' && item.mediaType !== mediaType) continue;
           if (search) {

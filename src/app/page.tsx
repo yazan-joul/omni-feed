@@ -92,7 +92,7 @@ export default function HomePage() {
       });
       const data = await res.json();
       console.log(`[Targeted Ingest] Ingested ${data.ingested || 0} items for ${newSource.name}`);
-      await fetchFeed(false, true);
+      await fetchFeed(false, true, [newSource]);
     } catch (err) {
       console.error('Failed to ingest new source:', err);
     } finally {
@@ -141,7 +141,7 @@ export default function HomePage() {
   };
 
   // Fetch Aggregated Feed Data (Only runs on mount, source changes, or manual refresh)
-  const fetchFeed = useCallback(async (isLoadMore = false, forceRefresh = false) => {
+  const fetchFeed = useCallback(async (isLoadMore = false, forceRefresh = false, extraCustomSources: FeedSource[] = []) => {
     if (isLoadMore) {
       setIsLoadingMore(true);
     } else {
@@ -175,9 +175,13 @@ export default function HomePage() {
         params.set('disabledDefaults', JSON.stringify(disabledOrRemovedDefaultIds));
       }
 
-      // Pass enabled custom sources
-      if (customOnly.length > 0) {
-        params.set('customSources', JSON.stringify(customOnly.filter((s) => s.enabled)));
+      // Pass enabled custom sources (merge with any extra sources passed explicitly)
+      const allCustomSources = [
+        ...customOnly.filter((s) => s.enabled),
+        ...extraCustomSources.filter((s) => s.enabled && !customOnly.some((c) => c.id === s.id)),
+      ];
+      if (allCustomSources.length > 0) {
+        params.set('customSources', JSON.stringify(allCustomSources));
       }
       
       if (selectedPlatform !== 'all') {

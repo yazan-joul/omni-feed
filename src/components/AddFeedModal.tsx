@@ -171,7 +171,8 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources, ex
       const sourceName = name.trim() || currentValidation.title || 'Custom Stream';
 
       const newSource: FeedSource = {
-        id: `custom-${Date.now()}`,
+        id: `custom-${finalPlatform}-${finalUrl.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 40)}`,
+        
         name: sourceName,
         platform: finalPlatform,
         url: finalUrl,
