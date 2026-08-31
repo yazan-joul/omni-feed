@@ -10,6 +10,8 @@ import {
   Sparkles,
 } from 'lucide-react';
 
+import { useAuth } from '@/lib/hooks/useAuth';
+
 interface NavbarProps {
   activeTab: 'feed' | 'bookmarks';
   setActiveTab: (tab: 'feed' | 'bookmarks') => void;
@@ -18,8 +20,6 @@ interface NavbarProps {
   onOpenAddModal: () => void;
   onOpenSourcesModal: () => void;
 }
-
-import { useAuth } from '@/lib/hooks/useAuth';
 
 export function Navbar({
   activeTab,

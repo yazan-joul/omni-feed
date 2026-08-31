@@ -18,16 +18,19 @@ export function useAuth() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser && dbClient) {
-        // Initialize user document if not exists
-        const userRef = doc(dbClient, 'users', currentUser.uid);
-        const userSnap = await getDoc(userRef);
-        if (!userSnap.exists()) {
-          await setDoc(userRef, {
-            email: currentUser.email,
-            displayName: currentUser.displayName,
-            photoURL: currentUser.photoURL,
-            createdAt: new Date().toISOString()
-          }, { merge: true });
+        try {
+          const userRef = doc(dbClient, 'users', currentUser.uid);
+          const userSnap = await getDoc(userRef);
+          if (!userSnap.exists()) {
+            await setDoc(userRef, {
+              email: currentUser.email,
+              displayName: currentUser.displayName,
+              photoURL: currentUser.photoURL,
+              createdAt: new Date().toISOString()
+            }, { merge: true });
+          }
+        } catch (e) {
+          console.warn('[useAuth] Could not sync user to Firestore:', e);
         }
       }
       setLoading(false);
@@ -37,14 +40,17 @@ export function useAuth() {
   }, []);
 
   const signIn = async () => {
-    if (!auth) {
-      alert("Firebase is not configured yet. Please add NEXT_PUBLIC_FIREBASE_API_KEY to your .env");
+    if (!auth || !googleProvider) {
+      alert("Firebase is not configured yet. Please configure your NEXT_PUBLIC_FIREBASE_* keys.");
       return;
     }
     try {
       await signInWithPopup(auth, googleProvider);
-    } catch (error) {
-      console.error('Error signing in', error);
+    } catch (error: any) {
+      console.error('Error signing in:', error);
+      if (error?.code !== 'auth/popup-closed-by-user') {
+        alert(`Sign in failed: ${error?.message || 'Unknown error'}`);
+      }
     }
   };
 
@@ -53,7 +59,7 @@ export function useAuth() {
     try {
       await firebaseSignOut(auth);
     } catch (error) {
-      console.error('Error signing out', error);
+      console.error('Error signing out:', error);
     }
   };
 
