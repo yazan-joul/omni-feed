@@ -107,8 +107,9 @@ export async function GET(request: NextRequest) {
       if (globalFeedCache) {
         // First check which custom source IDs actually have items in cache
         const cachedSourceIds = new Set(globalFeedCache.map(i => i.sourceId));
+        const defaultSourceIds = new Set(DEFAULT_FEED_SOURCES.map(ds => ds.id));
         const missingCustomIds = [...activeSourceIds].filter(id => 
-          id.startsWith('custom-') && !cachedSourceIds.has(id)
+          !defaultSourceIds.has(id) && !cachedSourceIds.has(id)
         );
         
         // If any custom sources have no items in cache, fetch them directly from Firestore
@@ -140,11 +141,12 @@ export async function GET(request: NextRequest) {
           if (!activeSourceIds.has(item.sourceId)) continue;
           if (mediaType && mediaType !== 'all' && item.mediaType !== mediaType) continue;
           if (search) {
+            const authorName = typeof item.author === 'string' ? item.author : item.author?.name || '';
             const matches = 
-              item.title.toLowerCase().includes(search) ||
-              item.summary?.toLowerCase().includes(search) ||
-              item.author.name.toLowerCase().includes(search) ||
-              item.tags.some((tag) => tag.toLowerCase().includes(search));
+              (item.title && item.title.toLowerCase().includes(search)) ||
+              (item.summary && item.summary.toLowerCase().includes(search)) ||
+              authorName.toLowerCase().includes(search) ||
+              (Array.isArray(item.tags) && item.tags.some((tag) => typeof tag === 'string' && tag.toLowerCase().includes(search)));
             if (!matches) continue;
           }
 
@@ -201,12 +203,12 @@ export async function GET(request: NextRequest) {
         if (!activeSourceIds.has(item.sourceId)) continue;
         if (mediaType && mediaType !== 'all' && item.mediaType !== mediaType) continue;
         if (search) {
-          const s = search;
+          const authorName = typeof item.author === 'string' ? item.author : item.author?.name || '';
           const matches = 
-            item.title.toLowerCase().includes(s) ||
-            item.summary?.toLowerCase().includes(s) ||
-            item.author.name.toLowerCase().includes(s) ||
-            item.tags.some((tag) => tag.toLowerCase().includes(s));
+            (item.title && item.title.toLowerCase().includes(search)) ||
+            (item.summary && item.summary.toLowerCase().includes(search)) ||
+            authorName.toLowerCase().includes(search) ||
+            (Array.isArray(item.tags) && item.tags.some((tag) => typeof tag === 'string' && tag.toLowerCase().includes(search)));
           if (!matches) continue;
         }
 
