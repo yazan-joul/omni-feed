@@ -128,7 +128,7 @@ export default function HomePage() {
       const data = await res.json();
       
       if (data.success) {
-        await fetchFeed();
+        await fetchFeed(false, true);
         if (data.errors && data.errors.length > 0) {
           alert("Partial Sync: Some sources failed to fetch (e.g., blocked by Twitter/IG).\n\nDetails: " + data.errors[0]);
         }
