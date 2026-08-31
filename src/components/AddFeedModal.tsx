@@ -30,6 +30,7 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources, ex
   const [name, setName] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [addedSuccess, setAddedSuccess] = useState(false);
 
   const [validationResult, setValidationResult] = useState<{
     valid: boolean;
@@ -92,6 +93,7 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources, ex
         body: JSON.stringify({ url: inputUrl, platform }),
       });
       const data = await res.json();
+      data.valid = data.success;
       setValidationResult(data);
       if (data.success && data.platform) {
         setPlatform(data.platform as ContentPlatform);
@@ -179,19 +181,25 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources, ex
         isCustom: true,
       };
 
-      onAddSource(newSource);
-      onClose();
-      setUrl('');
-      setName('');
-      setValidationResult(null);
+      // Show success animation
+      setAddedSuccess(true);
+      setTimeout(() => {
+        onAddSource(newSource);
+        onClose();
+        setUrl('');
+        setName('');
+        setValidationResult(null);
+        setAddedSuccess(false);
+        setIsSubmitting(false);
+      }, 1800);
     } catch (err: any) {
       setValidationResult({
         valid: false,
         error: err.message || 'Error adding feed.',
       });
-    } finally {
       setIsSubmitting(false);
     }
+
   };
 
   
@@ -226,7 +234,18 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources, ex
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        
+        {addedSuccess ? (
+          <div className="flex flex-col items-center justify-center py-12 animate-in zoom-in duration-300">
+            <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mb-6">
+              <CheckCircle className="w-10 h-10 text-emerald-400" />
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-2">Stream Added!</h3>
+            <p className="text-slate-400 text-center">Your new feed is now connected.</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-6">
+
           
           {/* Platform Selector Grid */}
           <div className="space-y-2.5">
@@ -352,6 +371,7 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources, ex
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );
