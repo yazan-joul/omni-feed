@@ -1,12 +1,24 @@
-'use client';
+const fs = require('fs');
 
-import React, { useState, useEffect } from 'react';
+const path = 'src/components/AddFeedModal.tsx';
+let old = fs.readFileSync(path, 'utf8');
+
+const match1 = old.match(/(const handleFileChange = async[\s\S]*?)(?=\n\n  const handleSubmit = async)/);
+const handleFileChangeCode = match1[1];
+
+const match2 = old.match(/(const handleSubmit = async[\s\S]*?)(?=\n\n  return \()/);
+const handleSubmitCode = match2[1];
+
+const newContent = `'use client';
+
+import React, { useState, useRef, useEffect } from 'react';
 import {
   X,
   Plus,
   AlertCircle,
   CheckCircle,
   Loader2,
+  Upload,
   Youtube,
   Radio,
   MessageSquare,
@@ -29,6 +41,10 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources }: 
   const [name, setName] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [isImporting, setIsImporting] = useState(false);
+  const [importStatus, setImportStatus] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [validationResult, setValidationResult] = useState<{
     valid: boolean;
@@ -80,7 +96,8 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources }: 
     }
   };
 
-  const validateUrl = async (inputUrl: string) => {
+  const handleValidate = async () => {
+    if (!url.trim()) return;
     setIsValidating(true);
     setValidationResult(null);
 
@@ -88,91 +105,26 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources }: 
       const res = await fetch('/api/validate-feed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: inputUrl, platform }),
+        body: JSON.stringify({ url, platform }),
       });
       const data = await res.json();
       setValidationResult(data);
       if (data.success && data.platform) {
         setPlatform(data.platform as ContentPlatform);
       }
-      return data;
     } catch (err) {
       setValidationResult({ valid: false, error: 'Validation request failed.' });
-      return { success: false, error: 'Validation request failed.' };
     } finally {
       setIsValidating(false);
     }
   };
 
-  const handleValidate = async () => {
-    if (!url.trim()) return;
-    await validateUrl(url);
-  };
+  ${handleFileChangeCode}
 
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!url.trim()) return;
-
-    setIsSubmitting(true);
-
-    try {
-      // 1. Mandatory Validation Step before adding
-      let currentValidation = validationResult;
-      if (!currentValidation?.valid || currentValidation.url !== url.trim()) {
-        const data = await validateUrl(url);
-        if (!data.success) {
-          setValidationResult({
-            valid: false,
-            error: data.error || 'Could not validate this stream source.',
-          });
-          setIsSubmitting(false);
-          return;
-        }
-        currentValidation = {
-          valid: true,
-          title: data.title,
-          description: data.description,
-          channelId: data.channelId,
-          url: data.url || url.trim(),
-          platform: data.platform || platform,
-        };
-      }
-
-      const finalUrl = currentValidation.url || url.trim();
-      const finalPlatform = currentValidation.platform || platform;
-      const sourceName = name.trim() || currentValidation.title || 'Custom Stream';
-
-      const newSource: FeedSource = {
-        id: `custom-${Date.now()}`,
-        name: sourceName,
-        platform: finalPlatform,
-        url: finalUrl,
-        channelId: currentValidation.channelId,
-        description: currentValidation.description || `Custom stream from ${finalUrl}`,
-        enabled: true,
-        isCustom: true,
-      };
-
-      onAddSource(newSource);
-      onClose();
-      setUrl('');
-      setName('');
-      setValidationResult(null);
-    } catch (err: any) {
-      setValidationResult({
-        valid: false,
-        error: err.message || 'Error adding feed.',
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  
+  ${handleSubmitCode}
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
@@ -201,6 +153,33 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources }: 
           </button>
         </div>
 
+        {/* OPML Import (Top Right Action) */}
+        <div className="absolute top-8 right-16">
+          <input
+            type="file"
+            accept=".xml,.opml"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            className="hidden"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isImporting}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 border border-white/5 text-slate-300 hover:text-white text-[11px] font-medium transition-all"
+            title="Import feeds from an OPML file"
+          >
+            {isImporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+            <span>OPML</span>
+          </button>
+        </div>
+
+        {importStatus && (
+          <div className="mb-4 p-3 rounded-xl bg-emerald-950/60 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+            <CheckCircle className="w-4 h-4" />
+            <span>{importStatus}</span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
           
           {/* Platform Selector Grid */}
@@ -215,14 +194,14 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources }: 
                     setPlatform(p.id as ContentPlatform);
                     setValidationResult(null);
                   }}
-                  className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-all group ${
+                  className={\`flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-all group \${
                     platform === p.id 
                       ? 'bg-cyan-500/10 border-cyan-500/50 shadow-inner shadow-cyan-500/10' 
                       : 'bg-slate-900/50 border-white/5 hover:bg-slate-800/80 hover:border-white/10'
-                  }`}
+                  }\`}
                 >
                   {p.icon}
-                  <span className={`text-[11px] font-medium ${platform === p.id ? 'text-cyan-100' : 'text-slate-400 group-hover:text-slate-300'}`}>
+                  <span className={\`text-[11px] font-medium \${platform === p.id ? 'text-cyan-100' : 'text-slate-400 group-hover:text-slate-300'}\`}>
                     {p.label}
                   </span>
                 </button>
@@ -265,11 +244,11 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources }: 
           {/* Validation Feedback */}
           {validationResult && (
             <div
-              className={`p-3.5 rounded-xl border text-xs flex items-start gap-2.5 ${
+              className={\`p-3.5 rounded-xl border text-xs flex items-start gap-2.5 \${
                 validationResult.valid
                   ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-300'
                   : 'bg-red-950/20 border-red-500/30 text-red-300'
-              }`}
+              }\`}
             >
               {validationResult.valid ? (
                 <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
@@ -282,7 +261,7 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources }: 
                 </p>
                 <p className="text-[11px] opacity-90">
                   {validationResult.valid
-                    ? validationResult.description || `Title: ${validationResult.title}`
+                    ? validationResult.description || \`Title: \${validationResult.title}\`
                     : validationResult.error}
                 </p>
               </div>
@@ -294,7 +273,7 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources }: 
             <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Display Title (Optional)</label>
             <input
               type="text"
-              placeholder={validationResult?.title ? `e.g. ${validationResult.title}` : 'Custom name for this feed'}
+              placeholder={validationResult?.title ? \`e.g. \${validationResult.title}\` : 'Custom name for this feed'}
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-white/10 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 shadow-inner"
@@ -330,4 +309,7 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources }: 
       </div>
     </div>
   );
-}
+}`;
+
+fs.writeFileSync(path, newContent);
+console.log('Fixed modal');

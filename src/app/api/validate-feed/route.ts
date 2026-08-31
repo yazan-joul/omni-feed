@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     let rawInput = (body?.url || '').trim();
+    const explicitPlatform = body?.platform;
 
     if (!rawInput) {
       return NextResponse.json(
@@ -73,28 +74,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // --- 0.5 iTunes Podcast Search (if input is likely a search query and not a URL) ---
+    // --- 0.5 Smart Searches (YouTube / iTunes) ---
     if (!rawInput.includes('.') && !rawInput.startsWith('@') && !rawInput.startsWith('r/') && !rawInput.startsWith('/r/')) {
-      try {
-        const searchUrl = `https://itunes.apple.com/search?media=podcast&term=${encodeURIComponent(rawInput)}&limit=1`;
-        const res = await fetch(searchUrl, { signal: AbortSignal.timeout(4000) });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.results && data.results.length > 0) {
-            const podcast = data.results[0];
-            if (podcast.feedUrl) {
-              return NextResponse.json({
-                success: true,
-                platform: 'rss',
-                title: podcast.collectionName,
-                description: podcast.artistName ? `Podcast by ${podcast.artistName}` : 'Podcast',
-                url: podcast.feedUrl,
-              });
+      // YouTube Search
+      if (explicitPlatform === 'youtube') {
+        try {
+          const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(rawInput)}&sp=EgIQAg%253D%253D`;
+          const res = await fetch(url, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+            signal: AbortSignal.timeout(4000)
+          });
+          const html = await res.text();
+          const channelMatch = html.match(/channelId":"([^"]+)"/);
+          if (channelMatch && channelMatch[1]) {
+            rawInput = `https://www.youtube.com/channel/${channelMatch[1]}`;
+          }
+        } catch (e) {
+          // Fall through
+        }
+      } 
+      // Podcast Search
+      else if (!explicitPlatform || explicitPlatform === 'rss') {
+        try {
+          const searchUrl = `https://itunes.apple.com/search?media=podcast&term=${encodeURIComponent(rawInput)}&limit=1`;
+          const res = await fetch(searchUrl, { signal: AbortSignal.timeout(4000) });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.results && data.results.length > 0) {
+              const podcast = data.results[0];
+              if (podcast.feedUrl) {
+                return NextResponse.json({
+                  success: true,
+                  platform: 'rss',
+                  title: podcast.collectionName,
+                  description: podcast.artistName ? `Podcast by ${podcast.artistName}` : 'Podcast',
+                  url: podcast.feedUrl,
+                });
+              }
             }
           }
+        } catch (e) {
+          // Fall through
         }
-      } catch (e) {
-        // Fall through
       }
     }
 
