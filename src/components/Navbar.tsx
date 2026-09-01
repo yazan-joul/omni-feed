@@ -16,7 +16,7 @@ interface NavbarProps {
   activeTab: 'feed' | 'bookmarks';
   setActiveTab: (tab: 'feed' | 'bookmarks') => void;
   bookmarkCount: number;
-  sourcesCount: number;
+  sourcesCount: number | null;
   onOpenAddModal: () => void;
   onOpenSourcesModal: () => void;
 }
@@ -49,7 +49,11 @@ export function Navbar({
               </span>
             </div>
             <div className="flex items-center gap-1.5 text-[11px] text-slate-400 sm:text-xs">
-              <span className="truncate">{sourcesCount} Live Streams</span>
+              {sourcesCount === null ? (
+                <div className="h-3 w-24 bg-slate-800 animate-pulse rounded" />
+              ) : (
+                <span className="truncate">{sourcesCount} Live Streams</span>
+              )}
             </div>
           </div>
         </div>

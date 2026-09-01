@@ -387,7 +387,7 @@ export default function HomePage() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         bookmarkCount={bookmarks.length}
-        sourcesCount={sources.filter((s) => s.enabled).length}
+        sourcesCount={mounted ? sources.filter((s) => s.enabled).length : null}
         onOpenAddModal={() => setIsAddModalOpen(true)}
         onOpenSourcesModal={() => setIsSourcesModalOpen(true)}
       />
