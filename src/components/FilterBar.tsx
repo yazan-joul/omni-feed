@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
   Search,
   X,
@@ -15,13 +15,10 @@ import {
   Facebook,
   Twitter,
   MessageCircle,
-  Clock,
-  Layers,
-  CheckCheck,
-  Eye,
-  EyeOff,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
-import { ContentPlatform, MediaType, TimeRange } from '@/lib/types';
+import { ContentPlatform, MediaType } from '@/lib/types';
 
 interface FilterBarProps {
   searchQuery: string;
@@ -47,6 +44,7 @@ export function FilterBar({
   isLoading,
 }: FilterBarProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -100,8 +98,8 @@ export function FilterBar({
   };
 
   return (
-    <div className="flex flex-col gap-3 mb-6 relative z-20">
-      {/* 1. Top row: Search, Format toggles, Layout toggles, Global Refresh */}
+    <div className="flex flex-col gap-2.5 mb-6 relative z-20">
+      {/* 1. Top row: Search, Format toggles, Layout toggles */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-900/40 p-2 rounded-2xl border border-white/5 backdrop-blur-xl shadow-2xl">
         
         {/* Search */}
@@ -194,25 +192,47 @@ export function FilterBar({
         </div>
       </div>
 
-      {/* 2. Platform Filter & Refresh Buttons */}
-      <div className="flex flex-wrap items-center gap-2 pb-1 mt-2">
-        <button
-          onClick={() => setSelectedPlatform('all')}
-          className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all border shrink-0 ${
-            selectedPlatform === 'all'
-              ? 'bg-slate-700 text-white border-slate-600 shadow-sm'
-              : 'bg-slate-900/50 text-slate-400 hover:text-slate-200 border-white/10 hover:bg-slate-900/80 hover:border-white/20'
+      {/* 2. Platform Filters (Single scrollable line by default, expandable on click) */}
+      <div className="flex items-center gap-1.5">
+        <div
+          className={`flex items-center gap-1.5 transition-all duration-200 flex-1 ${
+            isExpanded
+              ? 'flex-wrap pb-1'
+              : 'overflow-x-auto scrollbar-none flex-nowrap pb-1'
           }`}
         >
-          All Platforms
+          <button
+            onClick={() => setSelectedPlatform('all')}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all border shrink-0 ${
+              selectedPlatform === 'all'
+                ? 'bg-slate-700 text-white border-slate-600 shadow-sm'
+                : 'bg-slate-900/50 text-slate-400 hover:text-slate-200 border-white/10 hover:bg-slate-900/80 hover:border-white/20'
+            }`}
+          >
+            All Platforms
+          </button>
+          
+          {renderPlatformButton('youtube', 'YouTube', Youtube, 'bg-red-600/90 text-white', 'text-red-500', 'hover:border-red-500/40 hover:bg-slate-900/80')}
+          {renderPlatformButton('rss', 'RSS', Rss, 'bg-cyan-600/90 text-white', 'text-cyan-400', 'hover:border-cyan-500/40 hover:bg-slate-900/80')}
+          {renderPlatformButton('twitter', 'X / Twitter', Twitter, 'bg-sky-500/90 text-white', 'text-sky-400', 'hover:border-sky-500/40 hover:bg-slate-900/80')}
+          {renderPlatformButton('reddit', 'Reddit', MessageCircle, 'bg-orange-600/90 text-white', 'text-orange-500', 'hover:border-orange-500/40 hover:bg-slate-900/80')}
+          {renderPlatformButton('instagram', 'Instagram', Instagram, 'bg-pink-600/90 text-white', 'text-pink-400', 'hover:border-pink-500/40 hover:bg-slate-900/80')}
+          {renderPlatformButton('facebook', 'Facebook', Facebook, 'bg-blue-700/90 text-white', 'text-blue-500', 'hover:border-blue-500/40 hover:bg-slate-900/80')}
+        </div>
+
+        {/* Expand / Collapse Button */}
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          title={isExpanded ? 'Collapse platform list' : 'Expand all platforms'}
+          className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 mb-1 rounded-lg text-xs font-medium text-slate-400 hover:text-white bg-slate-900/50 hover:bg-slate-800 border border-white/10 transition-colors"
+        >
+          <span className="hidden sm:inline">{isExpanded ? 'Collapse' : 'All'}</span>
+          {isExpanded ? (
+            <ChevronUp className="w-3.5 h-3.5 text-cyan-400" />
+          ) : (
+            <ChevronDown className="w-3.5 h-3.5" />
+          )}
         </button>
-        
-        {renderPlatformButton('youtube', 'YouTube', Youtube, 'bg-red-600/90 text-white', 'text-red-500', 'hover:border-red-500/40 hover:bg-slate-900/80')}
-        {renderPlatformButton('rss', 'RSS', Rss, 'bg-cyan-600/90 text-white', 'text-cyan-400', 'hover:border-cyan-500/40 hover:bg-slate-900/80')}
-        {renderPlatformButton('twitter', 'X / Twitter', Twitter, 'bg-sky-500/90 text-white', 'text-sky-400', 'hover:border-sky-500/40 hover:bg-slate-900/80')}
-        {renderPlatformButton('reddit', 'Reddit', MessageCircle, 'bg-orange-600/90 text-white', 'text-orange-500', 'hover:border-orange-500/40 hover:bg-slate-900/80')}
-        {renderPlatformButton('instagram', 'Instagram', Instagram, 'bg-pink-600/90 text-white', 'text-pink-400', 'hover:border-pink-500/40 hover:bg-slate-900/80')}
-        {renderPlatformButton('facebook', 'Facebook', Facebook, 'bg-blue-700/90 text-white', 'text-blue-500', 'hover:border-blue-500/40 hover:bg-slate-900/80')}
       </div>
     </div>
   );

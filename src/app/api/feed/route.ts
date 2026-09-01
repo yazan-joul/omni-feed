@@ -142,7 +142,7 @@ export async function GET(request: NextRequest) {
                   .where('sourceId', 'in', chunk)
                   .limit(parseInt(process.env.FEED_CUSTOM_FETCH_LIMIT || '50', 10))
                   .get(),
-                3000
+                15000
               )
             );
 
@@ -228,7 +228,7 @@ export async function GET(request: NextRequest) {
         query = query.startAfter(currentCursor);
       }
 
-      const snapshot = await withTimeout<any>(query.get(), 4000);
+      const snapshot = await withTimeout<any>(query.get(), 15000);
       
       if (snapshot.empty) {
         hasMoreInDb = false;
@@ -271,6 +271,26 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Error fetching from Firestore:', error?.message || error);
+    
+    // Graceful fallback for local development or transient Firestore connectivity issues
+    const fallbackMatches = FALLBACK_FEED_ITEMS.filter((item) => {
+      if (platform && platform !== 'all' && item.platform.toLowerCase() !== platform.toLowerCase()) return false;
+      if (mediaType && mediaType !== 'all' && item.mediaType !== mediaType) return false;
+      return true;
+    });
+
+    if (fallbackMatches.length > 0) {
+      return NextResponse.json({
+        success: true,
+        count: fallbackMatches.length,
+        items: fallbackMatches,
+        nextCursor: null,
+        sourcesCount: activeSourceIds.size,
+        failedSources: [],
+        isFallback: true,
+      });
+    }
+
     return NextResponse.json({
       success: false,
       error: 'Failed to fetch items from database.',
