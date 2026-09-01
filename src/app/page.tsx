@@ -232,9 +232,20 @@ export default function HomePage() {
           const prevItems = feedCache.current[cacheKey]?.items || [];
           const allItems = [...prevItems, ...data.items];
           const uniqueMap = new Map();
+          
+          const normalizeUrl = (url: string) => {
+            if (!url) return '';
+            return url.toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '').split('?')[0];
+          };
+
           for (const item of allItems) {
-            // Deduplicate by URL to prevent duplicates if DB migration changed IDs
-            const dedupKey = item.url || `${item.title}-${item.publishedAt}` || item.id;
+            const normUrl = normalizeUrl(item.url);
+            const normTitle = item.title ? item.title.trim().toLowerCase() : '';
+            // If it's a substantive article title, deduplicate by title. Otherwise use normalized URL.
+            const dedupKey = (normTitle.length > 15 && !normTitle.startsWith('post by @')) 
+              ? normTitle 
+              : (normUrl || item.id);
+              
             if (!uniqueMap.has(dedupKey)) {
               uniqueMap.set(dedupKey, item);
             }
@@ -255,12 +266,12 @@ export default function HomePage() {
           };
           setFeedItems(newItems);
         } else {
-          setFeedItems(data.items);
           feedCache.current[cacheKey] = {
             items: data.items,
             cursor: data.nextCursor || null,
             hasMore: !!data.nextCursor
           };
+          setFeedItems(data.items);
         }
         cursorRef.current = data.nextCursor || null;
         setHasMore(!!data.nextCursor);
