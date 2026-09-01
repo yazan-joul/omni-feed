@@ -263,7 +263,7 @@ export async function GET(request: NextRequest) {
           if (!matches) continue;
         }
 
-        validItems.push({ ...item, id: doc.id });
+        validItems.push(item);
         if (validItems.length >= TARGET_ITEMS) break; 
       }
       loops++;

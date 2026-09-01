@@ -81,13 +81,6 @@ export function FilterBar({
         <button
           onClick={() => {
             setSelectedPlatform(platform);
-            if (
-              (platform === 'youtube' && (selectedMediaType === 'article' || selectedMediaType === 'podcast')) ||
-              (platform === 'rss' && selectedMediaType === 'video') ||
-              (platform === 'instagram' && selectedMediaType === 'podcast')
-            ) {
-              setSelectedMediaType('all');
-            }
           }}
           className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
             isActive ? 'text-white' : 'text-slate-300 hover:text-white'
@@ -142,7 +135,6 @@ export function FilterBar({
             <button
               onClick={() => {
                 setSelectedMediaType('article');
-                if (selectedPlatform === 'youtube' || selectedPlatform === 'instagram') setSelectedPlatform('all');
               }}
               title="Articles & Posts"
               className={`p-1.5 rounded-lg transition-all ${
@@ -154,7 +146,6 @@ export function FilterBar({
             <button
               onClick={() => {
                 setSelectedMediaType('video');
-                if (selectedPlatform === 'rss') setSelectedPlatform('all');
               }}
               title="Videos"
               className={`p-1.5 rounded-lg transition-all ${
@@ -166,7 +157,6 @@ export function FilterBar({
             <button
               onClick={() => {
                 setSelectedMediaType('podcast');
-                if (selectedPlatform === 'youtube' || selectedPlatform === 'instagram' || selectedPlatform === 'facebook' || selectedPlatform === 'twitter' || selectedPlatform === 'reddit') setSelectedPlatform('all');
               }}
               title="Podcasts"
               className={`p-1.5 rounded-lg transition-all ${

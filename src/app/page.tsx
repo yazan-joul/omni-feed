@@ -257,6 +257,13 @@ export default function HomePage() {
               }
             }
             const newItems = Array.from(uniqueMap.values());
+            newItems.sort((a, b) => {
+              const tA = new Date(a.publishedAt).getTime();
+              const tB = new Date(b.publishedAt).getTime();
+              const validA = isNaN(tA) ? 0 : tA;
+              const validB = isNaN(tB) ? 0 : tB;
+              return validB - validA;
+            });
             feedCache.current[cacheKey] = {
               items: newItems,
               cursor: data.nextCursor || null,
