@@ -1,0 +1,33 @@
+name: Scheduled Feed Ingestion
+
+on:
+  schedule:
+    # Runs every 2 hours
+    - cron: '0 */2 * * *'
+  workflow_dispatch:
+    # Allows manual triggering from GitHub Actions tab
+
+jobs:
+  sync-feed:
+    name: Trigger Ingestion API
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Cron Ingest Endpoint
+        env:
+          APP_URL: ${{ secrets.APP_URL || 'https://omni-feed.up.railway.app' }}
+        run: |
+          echo "Triggering feed sync at: ${APP_URL}/api/cron/ingest"
+          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X GET "${APP_URL}/api/cron/ingest")
+          
+          BODY=$(echo "$RESPONSE" | sed -e '$d')
+          STATUS=$(echo "$RESPONSE" | tail -n1 | cut -d':' -f2)
+          
+          echo "Response Status: $STATUS"
+          echo "Response Body: $BODY"
+          
+          if [ "$STATUS" -ne 200 ]; then
+            echo "Error: Ingestion returned non-200 status code."
+            exit 1
+          fi
+          
+          echo "Feed ingestion completed successfully!"
