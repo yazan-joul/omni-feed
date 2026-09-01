@@ -152,9 +152,18 @@ async function handleIngest(request: NextRequest) {
     const errors: string[] = [];
     
     const allItems: FeedItem[] = [];
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    const oneMonthAgoMs = oneMonthAgo.getTime();
+
     results.forEach((res) => {
       if (res.status === 'fulfilled') {
-        allItems.push(...res.value.items);
+        const recentItems = res.value.items.filter(item => {
+          const pubMs = new Date(item.publishedAt).getTime();
+          // If it fails to parse, we can keep it safely, otherwise check age
+          return isNaN(pubMs) || pubMs > oneMonthAgoMs;
+        });
+        allItems.push(...recentItems);
       } else {
         errors.push(res.reason?.message || 'Unknown error');
       }

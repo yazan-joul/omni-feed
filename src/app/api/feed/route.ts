@@ -2,7 +2,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/lib/firebase/admin';
 import { FeedItem } from '@/lib/types';
 import { DEFAULT_FEED_SOURCES } from '@/lib/config/default-sources';
-import { FALLBACK_FEED_ITEMS } from '@/lib/mock-data';
+
 
 export const dynamic = 'force-dynamic';
 
@@ -319,15 +319,6 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Error fetching from Firestore:', error?.message || error);
     
-    // Graceful fallback for local development or transient Firestore connectivity issues
-    const fallbackMatches = FALLBACK_FEED_ITEMS.filter((item) => {
-      if (platform && platform !== 'all' && item.platform.toLowerCase() !== platform.toLowerCase()) return false;
-      if (mediaType && mediaType !== 'all' && item.mediaType !== mediaType) return false;
-      return true;
-    });
-
-    if (fallbackMatches.length > 0) {
-      return NextResponse.json({
     // If we hit Quota Exceeded (Resource Exhausted) or timeout, we should gracefully return empty
     // instead of throwing a 500 error, so the frontend UI doesn't break entirely.
     return NextResponse.json({

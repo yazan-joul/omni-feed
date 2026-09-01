@@ -137,7 +137,7 @@ export function VideoPlayerModal({
         <div className="relative aspect-video w-full bg-black">
           {item.videoId ? (
             <iframe
-              src={`https://www.youtube-nocookie.com/embed/${item.videoId}?autoplay=1&rel=0&modestbranding=1`}
+              src={`https://www.youtube-nocookie.com/embed/${item.videoId}?rel=0&modestbranding=1`}
               title={item.title}
               className="w-full h-full border-0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
