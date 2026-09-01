@@ -233,12 +233,14 @@ export default function HomePage() {
           const allItems = [...prevItems, ...data.items];
           const uniqueMap = new Map();
           for (const item of allItems) {
-            if (!uniqueMap.has(item.id)) {
-              uniqueMap.set(item.id, item);
+            // Deduplicate by URL to prevent duplicates if DB migration changed IDs
+            const dedupKey = item.url || item.id;
+            if (!uniqueMap.has(dedupKey)) {
+              uniqueMap.set(dedupKey, item);
             }
           }
           const newItems = Array.from(uniqueMap.values());
-          newItems.sort((a, b) => {
+          newItems.sort((a: FeedItem, b: FeedItem) => {
             const tA = new Date(a.publishedAt).getTime();
             const tB = new Date(b.publishedAt).getTime();
             const validA = isNaN(tA) ? 0 : tA;
