@@ -95,9 +95,10 @@ export class TwitterAdapter implements FeedAdapter {
         );
 
         const thumbnailUrl =
+          post.media?.[0]?.media_url_https ||
           post.media?.[0]?.mediaUrlHttps ||
-          post.media?.[0]?.url ||
           post.extendedEntities?.media?.[0]?.media_url_https ||
+          post.media?.[0]?.url ||
           undefined;
 
         const postUrl =

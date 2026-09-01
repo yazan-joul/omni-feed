@@ -93,7 +93,7 @@ export function FeedCard({
   
   const getImageUrl = (url?: string | null) => {
     if (!url) return undefined;
-    if (url.includes('cdninstagram.com') || url.includes('fbcdn.net')) {
+    if (url.includes('cdninstagram.com') || url.includes('fbcdn.net') || url.includes('twimg.com')) {
       return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
     }
     return url;
