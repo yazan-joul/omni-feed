@@ -276,6 +276,10 @@ export default function HomePage() {
         cursorRef.current = data.nextCursor || null;
         setHasMore(!!data.nextCursor);
         setFailedSources(data.failedSources || []);
+      } else if (data.success === false && data.error) {
+        // Server returned a structured error (e.g. missing Firestore index). Show it.
+        setError(data.error);
+        if (!isLoadMore) setFeedItems([]);
       } else {
         setError('Unable to load feed streams.');
         if (!isLoadMore) setFeedItems([]);

@@ -303,19 +303,26 @@ export async function GET(request: NextRequest) {
       loops++;
     }
 
-    // We must return the cursor as long as hasMoreInDb is true, even if validItems is empty,
-    // so the client can continue paginating past large gaps of unfiltered items.
-    const nextCursor = hasMoreInDb ? currentCursor : null;
-
-    // Deduplicate validItems by URL (or title+date) to handle older documents with different IDs
+    // Deduplicate validItems by normalised URL or title (same logic as client side)
     const uniqueMap = new Map<string, FeedItem>();
     for (const item of validItems) {
-      const dedupKey = item.url || `${item.title}-${item.publishedAt}` || item.id;
+      const normalizedUrl = item.url
+        ? item.url.toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '').split('?')[0]
+        : '';
+      const normTitle = item.title ? item.title.trim().toLowerCase() : '';
+      const dedupKey = (normTitle.length > 15 && !normTitle.startsWith('post by @'))
+        ? normTitle
+        : (normalizedUrl || item.id);
       if (!uniqueMap.has(dedupKey)) {
         uniqueMap.set(dedupKey, item);
       }
     }
     const finalItems = Array.from(uniqueMap.values());
+
+    // Only return a nextCursor when we filled a full page. If the platform has fewer than
+    // TARGET_ITEMS items total, returning a cursor causes the client to re-fetch the same
+    // data on every "load more" → root cause of the duplicate-on-every-device bug.
+    const nextCursor = (finalItems.length >= TARGET_ITEMS && hasMoreInDb) ? currentCursor : null;
 
     return NextResponse.json({
       success: true,
