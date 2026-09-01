@@ -328,19 +328,10 @@ export async function GET(request: NextRequest) {
 
     if (fallbackMatches.length > 0) {
       return NextResponse.json({
-        success: true,
-        count: fallbackMatches.length,
-        items: fallbackMatches,
-        nextCursor: null,
-        sourcesCount: activeSourceIds.size,
-        failedSources: [],
-        isFallback: true,
-      });
-    }
-
+    // If we hit Quota Exceeded (Resource Exhausted) or timeout, we should gracefully return empty
+    // instead of throwing a 500 error, so the frontend UI doesn't break entirely.
     return NextResponse.json({
-      success: false,
-      error: 'Failed to fetch items from database.',
+      success: true,
       count: 0,
       items: [],
       nextCursor: null,
