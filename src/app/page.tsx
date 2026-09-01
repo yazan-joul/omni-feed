@@ -228,50 +228,55 @@ export default function HomePage() {
       if (!isMountedRef.current) return;
 
       if (data.success && Array.isArray(data.items)) {
+        // Shared dedup function — fix: split query FIRST then strip trailing slash
+        const normalizeUrl = (url: string) => {
+          if (!url) return '';
+          return url.toLowerCase()
+            .replace(/^https?:\/\//, '')
+            .replace(/^www\./, '')
+            .split('?')[0]
+            .replace(/\/$/, '');
+        };
+        const makeKey = (item: FeedItem) => {
+          const normTitle = item.title ? item.title.trim().toLowerCase() : '';
+          const normUrl = normalizeUrl(item.url || '');
+          return (normTitle.length > 15 && !normTitle.startsWith('post by @'))
+            ? normTitle
+            : (normUrl || `${item.sourceId}-${item.publishedAt}`);
+        };
+
+        const deduped = (items: FeedItem[]): FeedItem[] => {
+          const seen = new Map<string, FeedItem>();
+          for (const item of items) {
+            const k = makeKey(item);
+            if (!seen.has(k)) seen.set(k, item);
+          }
+          return Array.from(seen.values());
+        };
+
         if (isLoadMore) {
           const prevItems = feedCache.current[cacheKey]?.items || [];
-          const allItems = [...prevItems, ...data.items];
-          const uniqueMap = new Map();
-          
-          const normalizeUrl = (url: string) => {
-            if (!url) return '';
-            return url.toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '').split('?')[0];
-          };
-
-          for (const item of allItems) {
-            const normUrl = normalizeUrl(item.url);
-            const normTitle = item.title ? item.title.trim().toLowerCase() : '';
-            // If it's a substantive article title, deduplicate by title. Otherwise use normalized URL.
-            const dedupKey = (normTitle.length > 15 && !normTitle.startsWith('post by @')) 
-              ? normTitle 
-              : (normUrl || item.id);
-              
-            if (!uniqueMap.has(dedupKey)) {
-              uniqueMap.set(dedupKey, item);
-            }
-          }
-          const newItems = Array.from(uniqueMap.values());
-          newItems.sort((a: FeedItem, b: FeedItem) => {
+          const merged = deduped([...prevItems, ...data.items]);
+          merged.sort((a: FeedItem, b: FeedItem) => {
             const tA = new Date(a.publishedAt).getTime();
             const tB = new Date(b.publishedAt).getTime();
-            const validA = isNaN(tA) ? 0 : tA;
-            const validB = isNaN(tB) ? 0 : tB;
-            return validB - validA;
+            return (isNaN(tB) ? 0 : tB) - (isNaN(tA) ? 0 : tA);
           });
-          
           feedCache.current[cacheKey] = {
-            items: newItems,
+            items: merged,
             cursor: data.nextCursor || null,
             hasMore: !!data.nextCursor
           };
-          setFeedItems(newItems);
+          setFeedItems(merged);
         } else {
+          // Always dedup even on initial load — never blindly trust server payload
+          const freshItems = deduped(data.items);
           feedCache.current[cacheKey] = {
-            items: data.items,
+            items: freshItems,
             cursor: data.nextCursor || null,
             hasMore: !!data.nextCursor
           };
-          setFeedItems(data.items);
+          setFeedItems(freshItems);
         }
         cursorRef.current = data.nextCursor || null;
         setHasMore(!!data.nextCursor);

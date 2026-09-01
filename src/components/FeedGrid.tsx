@@ -138,7 +138,7 @@ export function FeedGrid({
           <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5' : 'space-y-4'}>
             {items.filter(isItemToday).map(item => {
               const normUrl = item.url
-                ? item.url.toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '').split('?')[0]
+                ? item.url.toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('?')[0].replace(/\/$/, '')
                 : '';
               const normTitle = item.title ? item.title.trim().toLowerCase() : '';
               const stableKey = (normTitle.length > 15 && !normTitle.startsWith('post by @'))
@@ -183,7 +183,7 @@ export function FeedGrid({
             <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5' : 'space-y-4'}>
               {items.filter(i => !isItemToday(i)).map(item => {
                 const normUrl = item.url
-                  ? item.url.toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '').split('?')[0]
+                  ? item.url.toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('?')[0].replace(/\/$/, '')
                   : '';
                 const normTitle = item.title ? item.title.trim().toLowerCase() : '';
                 const stableKey = (normTitle.length > 15 && !normTitle.startsWith('post by @'))

@@ -126,7 +126,37 @@ export async function GET(request: NextRequest) {
     const TARGET_ITEMS = parseInt(process.env.FEED_TARGET_ITEMS || '24', 10); 
     
     let validItems: FeedItem[] = [];
-    let currentCursor = cursor;
+    // Composite cursor: "publishedAt|docId" to avoid timestamp collision duplicates
+    let cursorTime = cursor;
+    let cursorId: string | null = null;
+    if (cursor && cursor.includes('|')) {
+      [cursorTime, cursorId] = cursor.split('|');
+    }
+    let currentCursorTime = cursorTime;
+    let currentCursorId = cursorId;
+
+    // Dedup map shared across FAST and DEEP paths so we never collect dupes
+    // Bug fix: dedup DURING collection so pagination count is accurate
+    const globalDedupMap = new Map<string, FeedItem>();
+
+    const makeNormUrl = (url?: string | null) => {
+      if (!url) return '';
+      // IMPORTANT: split query string FIRST, then strip trailing slash
+      // (reversed order caused "page/?utm=x" → "page/" vs "page" mismatch)
+      return url.toLowerCase()
+        .replace(/^https?:\/\//, '')
+        .replace(/^www\./, '')
+        .split('?')[0]
+        .replace(/\/$/, '');
+    };
+
+    const makeItemDedupKey = (item: FeedItem) => {
+      const normTitle = item.title ? item.title.trim().toLowerCase() : '';
+      const normUrl = makeNormUrl(item.url);
+      return (normTitle.length > 15 && !normTitle.startsWith('post by @'))
+        ? normTitle
+        : (normUrl || `${item.sourceId}-${item.publishedAt}`);
+    };
 
     // ==========================================
     // FAST PATH: Memory Cache
@@ -150,7 +180,6 @@ export async function GET(request: NextRequest) {
         try {
           let addedNewItems = false;
           
-          // Firebase 'in' queries support max 30 items
           const chunkSize = 30;
           const chunks = [];
           for (let i = 0; i < missingCustomIds.length; i += chunkSize) {
@@ -192,9 +221,7 @@ export async function GET(request: NextRequest) {
             newCache.sort((a, b) => {
               const tA = new Date(a.publishedAt).getTime();
               const tB = new Date(b.publishedAt).getTime();
-              const validA = isNaN(tA) ? 0 : tA;
-              const validB = isNaN(tB) ? 0 : tB;
-              return validB - validA;
+              return (isNaN(tB) ? 0 : tB) - (isNaN(tA) ? 0 : tA);
             });
             globalFeedCache = newCache.slice(0, CACHE_SIZE);
           }
@@ -204,8 +231,11 @@ export async function GET(request: NextRequest) {
       }
 
       let startIndex = 0;
-      if (currentCursor) {
-        const idx = globalFeedCache.findIndex(i => i.publishedAt === currentCursor);
+      if (currentCursorTime) {
+        // Use composite cursor (publishedAt + id) to avoid timestamp collision
+        const idx = globalFeedCache.findIndex(i => 
+          i.publishedAt === currentCursorTime && (!currentCursorId || i.id === currentCursorId)
+        );
         startIndex = idx !== -1 ? idx + 1 : -1;
       }
 
@@ -224,8 +254,13 @@ export async function GET(request: NextRequest) {
             if (!matches) continue;
           }
 
-          validItems.push(item);
-          currentCursor = item.publishedAt;
+          const dedupKey = makeItemDedupKey(item);
+          if (!globalDedupMap.has(dedupKey)) {
+            globalDedupMap.set(dedupKey, item);
+            validItems.push(item);
+            currentCursorTime = item.publishedAt;
+            currentCursorId = item.id;
+          }
           if (validItems.length >= TARGET_ITEMS) break; 
         }
 
@@ -234,16 +269,17 @@ export async function GET(request: NextRequest) {
             success: true,
             count: validItems.length,
             items: validItems,
-            nextCursor: currentCursor,
+            nextCursor: `${currentCursorTime}|${currentCursorId}`,
             sourcesCount: activeSourceIds.size,
             failedSources: [],
           });
         }
         
-        // If we exhausted cache without filling TARGET_ITEMS, 
-        // set currentCursor to the LAST item in the cache so DEEP PATH can pick up perfectly.
+        // Exhausted cache — set cursor to last cache item so DEEP PATH picks up from there
         if (globalFeedCache.length > 0) {
-          currentCursor = globalFeedCache[globalFeedCache.length - 1].publishedAt;
+          const lastCacheItem = globalFeedCache[globalFeedCache.length - 1];
+          currentCursorTime = lastCacheItem.publishedAt;
+          currentCursorId = lastCacheItem.id;
         }
       }
     }
@@ -261,15 +297,13 @@ export async function GET(request: NextRequest) {
       
       const sourceIdsArr = Array.from(activeSourceIds);
       if (sourceIdsArr.length > 0 && sourceIdsArr.length <= 30 && platform !== 'all') {
-        // Highly efficient filtered query (requires Composite Index)
         query = query.where('sourceId', 'in', sourceIdsArr).orderBy('publishedAt', 'desc').limit(DB_FETCH_BATCH);
       } else {
-        // Fallback for > 30 sources or 'all'
         query = query.orderBy('publishedAt', 'desc').limit(DB_FETCH_BATCH);
       }
         
-      if (currentCursor) {
-        query = query.startAfter(currentCursor);
+      if (currentCursorTime) {
+        query = query.startAfter(currentCursorTime);
       }
 
       const snapshot = await withTimeout<any>(query.get(), 15000);
@@ -282,8 +316,9 @@ export async function GET(request: NextRequest) {
       const docs = snapshot.docs;
       
       for (const doc of docs) {
-        currentCursor = doc.data().publishedAt;
-        const item = doc.data() as FeedItem;
+        currentCursorTime = doc.data().publishedAt;
+        currentCursorId = doc.id;
+        const item = { id: doc.id, ...doc.data() } as FeedItem;
         
         if (!activeSourceIds.has(item.sourceId)) continue;
         if (mediaType && mediaType !== 'all' && item.mediaType !== mediaType) continue;
@@ -297,37 +332,25 @@ export async function GET(request: NextRequest) {
           if (!matches) continue;
         }
 
-        validItems.push(item);
+        const dedupKey = makeItemDedupKey(item);
+        if (!globalDedupMap.has(dedupKey)) {
+          globalDedupMap.set(dedupKey, item);
+          validItems.push(item);
+        }
         if (validItems.length >= TARGET_ITEMS) break; 
       }
       loops++;
     }
 
-    // Deduplicate validItems by normalised URL or title (same logic as client side)
-    const uniqueMap = new Map<string, FeedItem>();
-    for (const item of validItems) {
-      const normalizedUrl = item.url
-        ? item.url.toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '').split('?')[0]
-        : '';
-      const normTitle = item.title ? item.title.trim().toLowerCase() : '';
-      const dedupKey = (normTitle.length > 15 && !normTitle.startsWith('post by @'))
-        ? normTitle
-        : (normalizedUrl || item.id);
-      if (!uniqueMap.has(dedupKey)) {
-        uniqueMap.set(dedupKey, item);
-      }
-    }
-    const finalItems = Array.from(uniqueMap.values());
-
-    // Only return a nextCursor when we filled a full page. If the platform has fewer than
-    // TARGET_ITEMS items total, returning a cursor causes the client to re-fetch the same
-    // data on every "load more" → root cause of the duplicate-on-every-device bug.
-    const nextCursor = (finalItems.length >= TARGET_ITEMS && hasMoreInDb) ? currentCursor : null;
+    // Only return a nextCursor when we filled a full page
+    const nextCursor = (validItems.length >= TARGET_ITEMS && hasMoreInDb)
+      ? `${currentCursorTime}|${currentCursorId}`
+      : null;
 
     return NextResponse.json({
       success: true,
-      count: finalItems.length,
-      items: finalItems,
+      count: validItems.length,
+      items: validItems,
       nextCursor,
       sourcesCount: activeSourceIds.size,
       failedSources: [],
