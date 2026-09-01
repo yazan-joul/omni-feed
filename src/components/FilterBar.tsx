@@ -82,10 +82,9 @@ export function FilterBar({
           onClick={() => {
             setSelectedPlatform(platform);
           }}
-          className={`flex items-center gap-1 px-2.5 py-1.5 font-medium transition-colors ${
+          className={`flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
             isActive ? 'text-white' : 'text-slate-300 hover:text-white'
           }`}
-          style={{ fontSize: '11px' }}
         >
           <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-white' : iconColorClass}`} />
           <span className="whitespace-nowrap">{label}</span>
@@ -97,7 +96,7 @@ export function FilterBar({
   return (
     <div className="flex flex-col gap-2.5 mb-6 relative z-20">
       {/* 1. Top row: Search, Format toggles, Layout toggles */}
-      <div className="flex items-center justify-between gap-2 bg-slate-900/40 p-1.5 rounded-2xl border border-white/5 backdrop-blur-xl shadow-2xl overflow-x-auto scrollbar-none" style={{ WebkitTextSizeAdjust: '100%' }}>
+      <div className="flex items-center justify-between gap-2 bg-slate-900/40 p-1.5 rounded-2xl border border-white/5 backdrop-blur-xl shadow-2xl overflow-x-auto scrollbar-none [text-size-adjust:100%] [-webkit-text-size-adjust:100%]">
         
         {/* Search (Expandable on Mobile) */}
         <div className="relative group transition-all duration-300 w-10 sm:w-48 md:w-64 focus-within:w-40 sm:focus-within:w-64 shrink-0">
@@ -109,7 +108,6 @@ export function FilterBar({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-8 py-2 rounded-xl bg-slate-950/50 border border-transparent hover:border-white/10 focus:border-cyan-500/50 text-white placeholder-transparent sm:placeholder-slate-500 focus-within:placeholder-slate-500 text-[13px] focus:outline-none focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-inner cursor-pointer focus:cursor-text"
-            style={{ fontSize: '13px' }}
           />
           {searchQuery && (
             <button
@@ -128,10 +126,9 @@ export function FilterBar({
           <div className="flex items-center bg-slate-950/50 p-1 rounded-xl border border-white/5 shrink-0">
             <button
               onClick={() => setSelectedMediaType('all')}
-              className={`px-2 py-1.5 rounded-lg font-medium transition-all shrink-0 ${
+              className={`px-2 py-1.5 rounded-lg font-medium transition-all shrink-0 text-[11px] ${
                 selectedMediaType === 'all' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
-              style={{ fontSize: '11px' }}
             >
               All Types
             </button>
