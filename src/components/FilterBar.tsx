@@ -19,6 +19,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { ContentPlatform, MediaType } from '@/lib/types';
+import { useIsOverflowing } from '@/lib/hooks/useIsOverflowing';
 
 interface FilterBarProps {
   searchQuery: string;
@@ -44,7 +45,9 @@ export function FilterBar({
   isLoading,
 }: FilterBarProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const platformContainerRef = useRef<HTMLDivElement>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+  const isOverflowing = useIsOverflowing(platformContainerRef);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -194,7 +197,8 @@ export function FilterBar({
       {/* 2. Platform Filters */}
       <div className="flex items-center gap-1.5">
         <div
-          className={`flex items-center gap-1.5 transition-all duration-200 flex-1 sm:flex-wrap ${
+          ref={platformContainerRef}
+          className={`flex items-center gap-1.5 transition-all duration-200 flex-1 ${
             isExpanded
               ? 'flex-wrap pb-1'
               : 'overflow-x-auto scrollbar-none flex-nowrap pb-1'
@@ -219,19 +223,21 @@ export function FilterBar({
           {renderPlatformButton('facebook', 'Facebook', Facebook, 'bg-blue-700/90 text-white', 'text-blue-500', 'hover:border-blue-500/40 hover:bg-slate-900/80')}
         </div>
 
-        {/* Expand / Collapse Button (Hidden on Desktop) */}
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          title={isExpanded ? 'Collapse platform list' : 'Expand all platforms'}
-          className="sm:hidden shrink-0 flex items-center gap-1 px-2.5 py-1.5 mb-1 rounded-lg text-xs font-medium text-slate-400 hover:text-white bg-slate-900/50 hover:bg-slate-800 border border-white/10 transition-colors"
-        >
-          <span className="hidden sm:inline">{isExpanded ? 'Collapse' : 'All'}</span>
-          {isExpanded ? (
-            <ChevronUp className="w-3.5 h-3.5 text-cyan-400" />
-          ) : (
-            <ChevronDown className="w-3.5 h-3.5" />
-          )}
-        </button>
+        {/* Expand / Collapse Button (Dynamic based on overflow) */}
+        {(isOverflowing || isExpanded) && (
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            title={isExpanded ? 'Collapse platform list' : 'Expand all platforms'}
+            className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 mb-1 rounded-lg text-xs font-medium text-slate-400 hover:text-white bg-slate-900/50 hover:bg-slate-800 border border-white/10 transition-colors"
+          >
+            <span className="hidden sm:inline">{isExpanded ? 'Collapse' : 'All'}</span>
+            {isExpanded ? (
+              <ChevronUp className="w-3.5 h-3.5 text-cyan-400" />
+            ) : (
+              <ChevronDown className="w-3.5 h-3.5" />
+            )}
+          </button>
+        )}
       </div>
     </div>
   );

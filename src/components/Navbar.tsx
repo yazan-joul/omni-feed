@@ -33,9 +33,9 @@ export function Navbar({
 
   return (
     <header className="sticky top-0 z-40 w-full glass-panel border-b border-white/10 px-3 sm:px-4 lg:px-8 py-3 transition-colors">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
+      <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 sm:gap-4">
         {/* Left: Brand / Logo */}
-        <div className="flex min-w-0 flex-1 items-center gap-3 sm:flex-initial cursor-pointer" onClick={() => setActiveTab('feed')}>
+        <div className="flex min-w-0 flex-1 items-center gap-3 sm:flex-initial cursor-pointer order-1" onClick={() => setActiveTab('feed')}>
           <div className="h-10 w-10 shrink-0 rounded-xl bg-gradient-to-br from-cyan-500 via-teal-600 to-emerald-600 flex items-center justify-center shadow-lg shadow-cyan-500/25">
             <Layers className="w-5 h-5 text-white" />
           </div>
@@ -58,11 +58,11 @@ export function Navbar({
           </div>
         </div>
 
-        {/* Center: Main Navigation Tabs */}
-        <div className="hidden md:flex items-center p-1 rounded-xl bg-slate-900/60 border border-white/10">
+        {/* Center: Main Navigation Tabs (Order 3 on mobile, Order 2 on desktop) */}
+        <div className="flex w-full md:w-auto order-3 md:order-2 items-center p-1 rounded-xl bg-slate-900/60 border border-white/10 mt-1 md:mt-0">
           <button
             onClick={() => setActiveTab('feed')}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+            className={`flex flex-1 justify-center md:flex-none items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
               activeTab === 'feed'
                 ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30'
                 : 'text-slate-400 hover:text-white'
@@ -73,7 +73,7 @@ export function Navbar({
           </button>
           <button
             onClick={() => setActiveTab('bookmarks')}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all relative ${
+            className={`flex flex-1 justify-center md:flex-none items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all relative ${
               activeTab === 'bookmarks'
                 ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30'
                 : 'text-slate-400 hover:text-white'
@@ -84,8 +84,8 @@ export function Navbar({
           </button>
         </div>
 
-        {/* Right: Actions */}
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
+        {/* Right: Actions (Order 2 on mobile, Order 3 on desktop) */}
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5 order-2 md:order-3">
           {/* Add Custom Feed Button */}
           <button
             onClick={onOpenAddModal}
