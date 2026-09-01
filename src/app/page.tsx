@@ -14,6 +14,8 @@ import { useCustomSources } from '@/lib/hooks/useCustomSources';
 import { DEFAULT_FEED_SOURCES } from '@/lib/config/default-sources';
 import { FeedItem, FeedSource, ContentPlatform, MediaType, TimeRange } from '@/lib/types';
 import { Bookmark, Loader2 } from 'lucide-react';
+import { trackEvent } from '@/lib/analytics';
+
 
 export default function HomePage() {
   // Navigation tabs
@@ -264,17 +266,32 @@ export default function HomePage() {
   const handleOpenVideo = (item: FeedItem) => {
     markAsRead(item.id);
     setActiveVideoItem(item);
+    trackEvent('play_video', {
+      item_id: item.id,
+      platform: item.platform,
+      title: item.title,
+    });
   };
 
   const handleOpenReader = (item: FeedItem) => {
     markAsRead(item.id);
     setActiveReaderItem(item);
+    trackEvent('open_reader', {
+      item_id: item.id,
+      platform: item.platform,
+      title: item.title,
+    });
   };
 
   const handleOpenPodcast = (item: FeedItem) => {
     markAsRead(item.id);
     setActiveVideoItem(null);
     setActivePodcastItem(item);
+    trackEvent('play_podcast', {
+      item_id: item.id,
+      platform: item.platform,
+      title: item.title,
+    });
   };
 
   // Instant 0ms In-Memory Filtering (Client-side useMemo)

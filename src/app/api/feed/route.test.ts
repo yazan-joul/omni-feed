@@ -11,7 +11,13 @@ vi.mock('@/lib/firebase/admin', () => {
     { id: '3', data: () => ({ sourceId: 'custom1', publishedAt: '2026-09-01T10:00:00Z', title: 'Test 3', platform: 'youtube' }) },
   ];
 
-  const createMockQuery = (filters: string[] = [], customSourceId?: string) => {
+  const createMockQuery = (filters: string[] = [], customSourceId?: any) => {
+    const filterCustomDocs = (d: any) => {
+      const sId = d.data().sourceId;
+      if (Array.isArray(customSourceId)) return customSourceId.includes(sId);
+      return sId === customSourceId;
+    };
+
     return {
       where: vi.fn().mockImplementation((field, op, val) => {
         return createMockQuery([...filters, 'where'], field === 'sourceId' ? val : customSourceId);
@@ -26,9 +32,9 @@ vi.mock('@/lib/firebase/admin', () => {
       startAfter: vi.fn().mockImplementation(() => createMockQuery(filters, customSourceId)),
       get: vi.fn().mockResolvedValue({
         empty: false,
-        docs: customSourceId ? customDocs.filter(d => d.data().sourceId === customSourceId) : mockDocs,
+        docs: customSourceId ? customDocs.filter(filterCustomDocs) : mockDocs,
         forEach: (cb: any) => {
-          const docsToUse = customSourceId ? customDocs.filter(d => d.data().sourceId === customSourceId) : mockDocs;
+          const docsToUse = customSourceId ? customDocs.filter(filterCustomDocs) : mockDocs;
           docsToUse.forEach(cb);
         }
       })

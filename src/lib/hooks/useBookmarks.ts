@@ -5,6 +5,7 @@ import { FeedItem } from '../types';
 import { useAuth } from './useAuth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { dbClient } from '../firebase/client';
+import { trackEvent } from '../analytics';
 
 export function useBookmarks() {
   const { user } = useAuth();
@@ -80,8 +81,17 @@ export function useBookmarks() {
       let updated: FeedItem[];
       if (exists) {
         updated = prev.filter((b) => b.id !== item.id);
+        trackEvent('bookmark_removed', {
+          item_id: item.id,
+          platform: item.platform,
+        });
       } else {
         updated = [item, ...prev];
+        trackEvent('bookmark_added', {
+          item_id: item.id,
+          platform: item.platform,
+          media_type: item.mediaType,
+        });
       }
       syncBookmarks(updated);
       return updated;

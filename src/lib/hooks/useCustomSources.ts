@@ -7,6 +7,8 @@ import { useAuth } from './useAuth';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { dbClient } from '../firebase/client';
 
+import { trackEvent } from '../analytics';
+
 export function useCustomSources() {
   const { user, loading: authLoading } = useAuth();
   const [sources, setSources] = useState<FeedSource[]>(DEFAULT_FEED_SOURCES);
@@ -77,14 +79,35 @@ export function useCustomSources() {
     setSources(prev => {
       const updated = [newSource, ...prev];
       persistSources(updated);
+      
+      const customCount = updated.filter((s) => s.isCustom).length;
+      trackEvent('stream_added', {
+        platform: newSource.platform,
+        stream_id: newSource.id,
+        stream_name: newSource.name,
+        total_streams: updated.length,
+        custom_streams_count: customCount,
+      });
+
       return updated;
     });
   };
 
   const removeSource = (id: string) => {
     setSources(prev => {
+      const targetSource = prev.find((s) => s.id === id);
       const updated = prev.filter((s) => s.id !== id);
       persistSources(updated);
+
+      const customCount = updated.filter((s) => s.isCustom).length;
+      trackEvent('stream_removed', {
+        platform: targetSource?.platform || 'unknown',
+        stream_id: id,
+        stream_name: targetSource?.name || 'unknown',
+        total_streams: updated.length,
+        custom_streams_count: customCount,
+      });
+
       return updated;
     });
   };
@@ -100,6 +123,9 @@ export function useCustomSources() {
   const resetToDefault = () => {
     setSources(DEFAULT_FEED_SOURCES);
     persistSources(DEFAULT_FEED_SOURCES);
+    trackEvent('streams_reset_to_default', {
+      total_streams: DEFAULT_FEED_SOURCES.length,
+    });
   };
 
   const importSources = (newSources: FeedSource[]): number => {
@@ -110,6 +136,13 @@ export function useCustomSources() {
       addedCount = toAdd.length;
       const updated = [...toAdd, ...prev];
       persistSources(updated);
+
+      trackEvent('streams_imported', {
+        imported_count: addedCount,
+        total_streams: updated.length,
+        custom_streams_count: updated.filter((s) => s.isCustom).length,
+      });
+
       return updated;
     });
     return addedCount;
