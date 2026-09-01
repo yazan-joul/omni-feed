@@ -102,15 +102,27 @@ export default function HomePage() {
       // Ensure source is added even if ingestion fails so user can try again
       addSource(newSource);
     } finally {
-      setIsSyncing(false);
-      setSyncingSource(null);
+      if (isMountedRef.current) {
+        setIsSyncing(false);
+        setSyncingSource(null);
+      }
     }
   };
 
   // Sync Feeds (Background Ingestion)
 
-  // Fetch Aggregated Feed Data (Only runs on mount, source changes, or manual refresh)
+  const isMountedRef = useRef(true);
+  const isFetchingRef = useRef(false);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const fetchFeed = useCallback(async (isLoadMore = false, forceRefresh = false, extraCustomSources: FeedSource[] = []) => {
+    if (isLoadMore && isFetchingRef.current) return;
     
     const params = new URLSearchParams();
 
@@ -147,6 +159,7 @@ export default function HomePage() {
 
     if (isLoadMore) {
       setIsLoadingMore(true);
+      isFetchingRef.current = true;
     } else {
       if (!forceRefresh && feedCache.current[cacheKey]) {
         // Restore from cache instantly
@@ -160,6 +173,7 @@ export default function HomePage() {
       }
       
       setIsLoading(true);
+      isFetchingRef.current = true;
       cursorRef.current = null;
       setHasMore(true);
     }
@@ -175,37 +189,6 @@ export default function HomePage() {
     fetchAbortController.current = abortController;
 
     try {
-      const params = new URLSearchParams();
-
-      // Pass disabled or removed default source IDs
-      const activeDefaultIds = sources.filter((s) => !s.isCustom && s.enabled).map((s) => s.id);
-      const disabledOrRemovedDefaultIds = DEFAULT_FEED_SOURCES.filter(
-        (ds) => !activeDefaultIds.includes(ds.id)
-      ).map((ds) => ds.id);
-
-      if (disabledOrRemovedDefaultIds.length > 0) {
-        params.set('disabledDefaults', JSON.stringify(disabledOrRemovedDefaultIds));
-      }
-
-      // Pass enabled custom sources (merge with any extra sources passed explicitly)
-      const allCustomSources = [
-        ...customOnly.filter((s) => s.enabled),
-        ...extraCustomSources.filter((s) => s.enabled && !customOnly.some((c) => c.id === s.id)),
-      ];
-      if (allCustomSources.length > 0) {
-        params.set('customSources', JSON.stringify(allCustomSources));
-      }
-      
-      if (selectedPlatform !== 'all') {
-        params.set('platform', selectedPlatform);
-      }
-      if (selectedMediaType !== 'all') {
-        params.set('mediaType', selectedMediaType);
-      }
-      if (debouncedSearch) {
-        params.set('search', debouncedSearch);
-      }
-      
       if (isLoadMore && cursorRef.current) {
         params.set('cursor', cursorRef.current);
       }
@@ -242,34 +225,33 @@ export default function HomePage() {
 
       // Ensure this is still the most recent request
       if (abortController.signal.aborted) return;
+      if (!isMountedRef.current) return;
 
       if (data.success && Array.isArray(data.items)) {
         if (isLoadMore) {
-          let updatedItems: FeedItem[] = [];
-          setFeedItems(prev => {
-            const allItems = [...prev, ...data.items];
-            const uniqueMap = new Map();
-            for (const item of allItems) {
-              if (!uniqueMap.has(item.id)) {
-                uniqueMap.set(item.id, item);
-              }
+          const prevItems = feedCache.current[cacheKey]?.items || [];
+          const allItems = [...prevItems, ...data.items];
+          const uniqueMap = new Map();
+          for (const item of allItems) {
+            if (!uniqueMap.has(item.id)) {
+              uniqueMap.set(item.id, item);
             }
-            const newItems = Array.from(uniqueMap.values());
-            newItems.sort((a, b) => {
-              const tA = new Date(a.publishedAt).getTime();
-              const tB = new Date(b.publishedAt).getTime();
-              const validA = isNaN(tA) ? 0 : tA;
-              const validB = isNaN(tB) ? 0 : tB;
-              return validB - validA;
-            });
-            updatedItems = newItems;
-            return newItems;
+          }
+          const newItems = Array.from(uniqueMap.values());
+          newItems.sort((a, b) => {
+            const tA = new Date(a.publishedAt).getTime();
+            const tB = new Date(b.publishedAt).getTime();
+            const validA = isNaN(tA) ? 0 : tA;
+            const validB = isNaN(tB) ? 0 : tB;
+            return validB - validA;
           });
+          
           feedCache.current[cacheKey] = {
-            items: updatedItems,
+            items: newItems,
             cursor: data.nextCursor || null,
             hasMore: !!data.nextCursor
           };
+          setFeedItems(newItems);
         } else {
           setFeedItems(data.items);
           feedCache.current[cacheKey] = {
@@ -287,14 +269,20 @@ export default function HomePage() {
       }
     } catch (err: any) {
       if (err.name === 'AbortError') return;
+      if (!isMountedRef.current) return;
       console.error('Fetch error:', err);
       setError(err?.message ? `Connection interrupted: ${err.message}` : 'Connection interrupted. Serving cached items.');
       if (!isLoadMore) setFeedItems((current) => (current.length > 0 ? current : []));
     } finally {
-      if (!isLoadMore && !abortController.signal.aborted) {
-        setIsLoading(false);
-      } else if (isLoadMore) {
-        setIsLoadingMore(false);
+      if (!abortController.signal.aborted) {
+        isFetchingRef.current = false;
+        if (isMountedRef.current) {
+          if (!isLoadMore) {
+            setIsLoading(false);
+          } else {
+            setIsLoadingMore(false);
+          }
+        }
       }
     }
   }, [customOnly, sources, selectedPlatform, selectedMediaType, debouncedSearch]);

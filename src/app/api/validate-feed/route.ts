@@ -12,6 +12,26 @@ async function discoverRssFromHtml(url: string): Promise<{ discoveredUrl: string
   try {
     if (!url.startsWith('http')) return { discoveredUrl: null, isYouTube: false };
 
+    // Prevent SSRF by validating the URL hostname
+    const parsedUrl = new URL(url);
+    const hostname = parsedUrl.hostname.toLowerCase();
+    
+    // Block common internal/private IPs and localhost
+    const isPrivateIP = 
+      hostname === 'localhost' || 
+      hostname === '127.0.0.1' || 
+      hostname === '::1' ||
+      hostname.startsWith('10.') ||
+      hostname.startsWith('192.168.') ||
+      hostname.startsWith('169.254.') ||
+      hostname.includes('internal') ||
+      (hostname.startsWith('172.') && parseInt(hostname.split('.')[1]) >= 16 && parseInt(hostname.split('.')[1]) <= 31);
+      
+    if (isPrivateIP) {
+      console.warn(`[SSRF Prevention] Blocked attempt to scan internal IP: ${hostname}`);
+      return { discoveredUrl: null, isYouTube: false };
+    }
+
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)',
@@ -56,7 +76,7 @@ async function discoverRssFromHtml(url: string): Promise<{ discoveredUrl: string
     }
 
     return { discoveredUrl: null, isYouTube };
-  } catch {
+  } catch (err: any) {
     return { discoveredUrl: null, isYouTube: false };
   }
 }

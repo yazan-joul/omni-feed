@@ -153,6 +153,7 @@ export class YouTubeAdapter implements FeedAdapter {
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Accept': 'application/xml, text/xml, */*',
         },
+        signal: AbortSignal.timeout(15000),
       });
 
       if (!response.ok) {
@@ -225,7 +226,7 @@ export class YouTubeAdapter implements FeedAdapter {
 
   private async fetchViaAPI(source: FeedSource, apiKey: string): Promise<FeedItem[]> {
     const url = `https://www.googleapis.com/youtube/v3/search?key=${apiKey}&channelId=${source.channelId}&part=snippet,id&order=date&maxResults=15`;
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
     if (!res.ok) throw new Error(`YouTube API returned ${res.status}`);
     const data = await res.json();
 
@@ -258,6 +259,21 @@ export class YouTubeAdapter implements FeedAdapter {
 
   async validate(url: string): Promise<{ valid: boolean; title?: string; description?: string; channelId?: string; feedUrl?: string }> {
     try {
+      const parsedUrl = new URL(url.startsWith('http') ? url : `https://${url}`);
+      const hostname = parsedUrl.hostname.toLowerCase();
+      
+      const isPrivateIP = 
+        hostname === 'localhost' || 
+        hostname === '127.0.0.1' || 
+        hostname === '::1' ||
+        hostname.startsWith('10.') ||
+        hostname.startsWith('192.168.') ||
+        hostname.startsWith('169.254.') ||
+        hostname.includes('internal') ||
+        (hostname.startsWith('172.') && parseInt(hostname.split('.')[1]) >= 16 && parseInt(hostname.split('.')[1]) <= 31);
+        
+      if (isPrivateIP) return { valid: false };
+
       const channelId = await this.resolveChannelId(url);
       if (!channelId) return { valid: false };
 
@@ -268,6 +284,7 @@ export class YouTubeAdapter implements FeedAdapter {
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Accept': 'application/xml, text/xml, */*',
         },
+        signal: AbortSignal.timeout(15000),
       });
 
       if (!res.ok) return { valid: false };

@@ -56,6 +56,7 @@ export class RSSAdapter implements FeedAdapter {
           'User-Agent': 'Mozilla/5.0 (compatible; OmniFeed/1.0; +https://omnifeed.dev)',
           'Accept': 'application/rss+xml, application/xml, text/xml, application/atom+xml, */*',
         },
+        signal: AbortSignal.timeout(15000),
         next: { revalidate: 300 }, // 5 min cache
       });
 
@@ -158,6 +159,21 @@ export class RSSAdapter implements FeedAdapter {
 
   async validate(url: string): Promise<{ valid: boolean; title?: string; description?: string }> {
     try {
+      const parsedUrl = new URL(url);
+      const hostname = parsedUrl.hostname.toLowerCase();
+      
+      const isPrivateIP = 
+        hostname === 'localhost' || 
+        hostname === '127.0.0.1' || 
+        hostname === '::1' ||
+        hostname.startsWith('10.') ||
+        hostname.startsWith('192.168.') ||
+        hostname.startsWith('169.254.') ||
+        hostname.includes('internal') ||
+        (hostname.startsWith('172.') && parseInt(hostname.split('.')[1]) >= 16 && parseInt(hostname.split('.')[1]) <= 31);
+        
+      if (isPrivateIP) return { valid: false };
+
       const response = await fetch(url, {
         headers: { 'User-Agent': 'OmniFeed-Validator/1.0' },
       });
