@@ -184,10 +184,33 @@ async function handleIngest(request: NextRequest) {
       }
     });
     await statusBatch.commit();
+
+    // Automatic 30-day Retention Cleanup: Delete items older than 30 days
+    let deletedCount = 0;
+    try {
+      const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+      const thirtyDaysAgoIso = new Date(Date.now() - THIRTY_DAYS_MS).toISOString();
+      
+      const oldDocsSnap = await db.collection('feed_items')
+        .where('publishedAt', '<', thirtyDaysAgoIso)
+        .limit(300)
+        .get();
+        
+      if (!oldDocsSnap.empty) {
+        const deleteBatch = db.batch();
+        oldDocsSnap.forEach(doc => deleteBatch.delete(doc.ref));
+        await deleteBatch.commit();
+        deletedCount = oldDocsSnap.size;
+        console.log(`[Cleanup] Deleted ${deletedCount} feed items older than 30 days.`);
+      }
+    } catch (cleanupErr: any) {
+      console.warn('[Cleanup Warning] Could not delete expired items:', cleanupErr.message);
+    }
     
     return NextResponse.json({
       success: true,
       ingested: totalIngested,
+      deletedExpired: deletedCount,
       errors: errors.length > 0 ? errors : undefined
     });
     
