@@ -12,9 +12,9 @@ async function run() {
   const db = getFirestore();
   let cursor = null;
   console.time('Total');
-  for (let i=0; i<5; i++) {
+  for (let i=0; i<3; i++) {
     console.time('Query ' + i);
-    let q = db.collection('feed_items').orderBy('publishedAt', 'desc').limit(200);
+    let q = db.collection('feed_items').orderBy('publishedAt', 'desc').limit(20);
     if (cursor) q = q.startAfter(cursor);
     const snap = await q.get();
     cursor = snap.docs[snap.docs.length-1]?.data().publishedAt;

@@ -256,8 +256,17 @@ export async function GET(request: NextRequest) {
     let hasMoreInDb = true;
 
     while (validItems.length < TARGET_ITEMS && loops < MAX_LOOPS && hasMoreInDb) {
+      const DB_FETCH_BATCH = parseInt(process.env.FEED_DB_FETCH_BATCH || '100', 10);
       let query = db.collection('feed_items') as any;
-      query = query.orderBy('publishedAt', 'desc').limit(200);
+      
+      const sourceIdsArr = Array.from(activeSourceIds);
+      if (sourceIdsArr.length > 0 && sourceIdsArr.length <= 30 && platform !== 'all') {
+        // Highly efficient filtered query (requires Composite Index)
+        query = query.where('sourceId', 'in', sourceIdsArr).orderBy('publishedAt', 'desc').limit(DB_FETCH_BATCH);
+      } else {
+        // Fallback for > 30 sources or 'all'
+        query = query.orderBy('publishedAt', 'desc').limit(DB_FETCH_BATCH);
+      }
         
       if (currentCursor) {
         query = query.startAfter(currentCursor);
@@ -317,7 +326,21 @@ export async function GET(request: NextRequest) {
       failedSources: [],
     });
   } catch (error: any) {
-    console.error('Error fetching from Firestore:', error?.message || error);
+    const errorMsg = error?.message || String(error);
+    console.error('Error fetching from Firestore:', errorMsg);
+
+    const indexLinkMatch = errorMsg.match(/https:\/\/console\.firebase\.google\.com[^\s]*/);
+    if (indexLinkMatch) {
+      return NextResponse.json({
+        success: false,
+        error: `A database index is required to filter by this platform efficiently. Please click here to create it (takes 2 mins): ${indexLinkMatch[0]}`,
+        count: 0,
+        items: [],
+        nextCursor: null,
+        sourcesCount: activeSourceIds.size,
+        failedSources: [],
+      });
+    }
     
     // If we hit Quota Exceeded (Resource Exhausted) or timeout, we should gracefully return empty
     // instead of throwing a 500 error, so the frontend UI doesn't break entirely.

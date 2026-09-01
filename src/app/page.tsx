@@ -13,7 +13,7 @@ import { useBookmarks } from '@/lib/hooks/useBookmarks';
 import { useCustomSources } from '@/lib/hooks/useCustomSources';
 import { DEFAULT_FEED_SOURCES } from '@/lib/config/default-sources';
 import { FeedItem, FeedSource, ContentPlatform, MediaType, TimeRange } from '@/lib/types';
-import { Bookmark, Loader2 } from 'lucide-react';
+import { Bookmark, Loader2, AlertCircle } from 'lucide-react';
 import { trackEvent } from '@/lib/analytics';
 
 
@@ -442,8 +442,20 @@ export default function HomePage() {
         />
 
         {error && (
-          <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-            {error}
+          <div className="flex flex-col items-center justify-center py-20 text-center animate-fadeIn">
+            <AlertCircle className="w-12 h-12 text-red-500/50 mb-4" />
+            <p className="text-red-400 max-w-md">
+              {error.includes('https://') ? (
+                <>
+                  {error.split('https://')[0]}
+                  <a href={`https://${error.split('https://')[1]}`} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline break-all">
+                    {`https://${error.split('https://')[1]}`}
+                  </a>
+                </>
+              ) : (
+                error
+              )}
+            </p>
           </div>
         )}
 
