@@ -30,8 +30,6 @@ export default function HomePage() {
 
   const [selectedPlatform, setSelectedPlatform] = useState<ContentPlatform | 'all'>('all');
   const [selectedMediaType, setSelectedMediaType] = useState<MediaType | 'all'>('all');
-  const [limitPerSource, setLimitPerSource] = useState<number>(0); // 0 = all
-  const [unreadOnly, setUnreadOnly] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // Modals & Drawers
@@ -49,7 +47,6 @@ export default function HomePage() {
   const [hasMore, setHasMore] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncingSource, setSyncingSource] = useState<FeedSource | null>(null);
-  const [refreshingPlatform, setRefreshingPlatform] = useState<ContentPlatform | 'all' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [failedSources, setFailedSources] = useState<string[]>([]);
 
@@ -107,43 +104,6 @@ export default function HomePage() {
   };
 
   // Sync Feeds (Background Ingestion)
-  const handleSyncFeeds = async (platformOverride?: string) => {
-    if (isSyncing) return;
-    const targetPlatform =
-      platformOverride && platformOverride !== 'all' && platformOverride !== 'All'
-        ? (platformOverride as ContentPlatform)
-        : 'all';
-
-    setIsSyncing(true);
-    setRefreshingPlatform(targetPlatform);
-    try {
-      let url = '/api/cron/ingest';
-      if (targetPlatform !== 'all') {
-        url += `?platform=${targetPlatform}`;
-      }
-      
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customSources: sources.filter(s => s.isCustom) })
-      });
-      const data = await res.json();
-      
-      if (data.success) {
-        await fetchFeed(false, true);
-        if (data.errors && data.errors.length > 0) {
-          alert("Partial Sync: Some sources failed to fetch (e.g., blocked by Twitter/IG).\n\nDetails: " + data.errors[0]);
-        }
-      } else {
-        console.error('Ingestion failed:', data.error);
-      }
-    } catch (error) {
-      console.error('Network error during sync:', error);
-    } finally {
-      setIsSyncing(false);
-      setRefreshingPlatform(null);
-    }
-  };
 
   // Fetch Aggregated Feed Data (Only runs on mount, source changes, or manual refresh)
   const fetchFeed = useCallback(async (isLoadMore = false, forceRefresh = false, extraCustomSources: FeedSource[] = []) => {
@@ -344,22 +304,8 @@ export default function HomePage() {
         return false;
       }
 
-      // 4. Unread Only Filter
-      if (unreadOnly && isRead(item.id)) {
-        return false;
-      }
-
       return true;
     });
-
-    // 5. Per-Source Capping
-    if (limitPerSource > 0) {
-      const counts: Record<string, number> = {};
-      return filtered.filter((item) => {
-        counts[item.sourceId] = (counts[item.sourceId] || 0) + 1;
-        return counts[item.sourceId] <= limitPerSource;
-      });
-    }
 
     return filtered;
   }, [
@@ -369,14 +315,8 @@ export default function HomePage() {
     searchQuery,
     selectedPlatform,
     selectedMediaType,
-    unreadOnly,
-    limitPerSource,
-    isRead,
   ]);
 
-  const handleMarkAllVisibleAsRead = () => {
-    markAllAsRead(displayedItems.map((i) => i.id));
-  };
   
   const hasActivePodcastPlayer = Boolean(activePodcastItem);
 
@@ -402,16 +342,9 @@ export default function HomePage() {
           setSelectedPlatform={setSelectedPlatform}
           selectedMediaType={selectedMediaType}
           setSelectedMediaType={setSelectedMediaType}
-          limitPerSource={limitPerSource}
-          setLimitPerSource={setLimitPerSource}
-          unreadOnly={unreadOnly}
-          setUnreadOnly={setUnreadOnly}
           viewMode={viewMode}
           setViewMode={setViewMode}
           isLoading={isLoading || isSyncing}
-          refreshingPlatform={refreshingPlatform}
-          onRefresh={() => handleSyncFeeds()}
-          onRefreshPlatform={(p) => handleSyncFeeds(p)}
         />
 
         {error && (
@@ -447,10 +380,7 @@ export default function HomePage() {
           onLoadMore={() => fetchFeed(true)}
           viewMode={viewMode}
           isBookmarked={isBookmarked}
-          isRead={isRead}
           onToggleBookmark={toggleBookmark}
-          onToggleRead={toggleRead}
-          onMarkAllAsRead={markAllAsRead}
           onOpenVideo={handleOpenVideo}
           onOpenReader={handleOpenReader}
           onOpenPodcast={handleOpenPodcast}
@@ -458,8 +388,6 @@ export default function HomePage() {
             setSearchQuery('');
             setSelectedPlatform('all');
             setSelectedMediaType('all');
-            setLimitPerSource(0);
-            setUnreadOnly(false);
           }}
           onOpenAddModal={() => setIsAddModalOpen(true)}
           failedSources={failedSources}

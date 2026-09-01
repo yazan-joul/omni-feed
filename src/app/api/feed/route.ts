@@ -13,7 +13,7 @@ let isRefreshing = false;
 const CACHE_TTL = 3 * 60 * 1000; // 3 minutes
 const CACHE_SIZE = parseInt(process.env.FEED_CACHE_SIZE || '500', 10); // Configurable cache size
 
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number = 4000): Promise<T> {
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number = 15000): Promise<T> {
   return Promise.race([
     promise,
     new Promise<T>((_, reject) =>
@@ -31,7 +31,7 @@ async function refreshCache() {
         .orderBy('publishedAt', 'desc')
         .limit(CACHE_SIZE)
         .get(),
-      5000
+      15000
     );
 
     const items: FeedItem[] = [];

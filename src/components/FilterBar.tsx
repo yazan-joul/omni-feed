@@ -4,7 +4,6 @@ import React, { useRef, useEffect } from 'react';
 import {
   Search,
   X,
-  RotateCw,
   LayoutGrid,
   List,
   Video,
@@ -31,16 +30,9 @@ interface FilterBarProps {
   setSelectedPlatform: (p: ContentPlatform | 'all') => void;
   selectedMediaType: MediaType | 'all';
   setSelectedMediaType: (m: MediaType | 'all') => void;
-  limitPerSource: number;
-  setLimitPerSource: (l: number) => void;
-  unreadOnly: boolean;
-  setUnreadOnly: (u: boolean) => void;
   viewMode: 'grid' | 'list';
   setViewMode: (v: 'grid' | 'list') => void;
   isLoading: boolean;
-  refreshingPlatform?: ContentPlatform | 'all' | null;
-  onRefresh: () => void;
-  onRefreshPlatform: (platform: ContentPlatform) => void;
 }
 
 export function FilterBar({
@@ -50,16 +42,9 @@ export function FilterBar({
   setSelectedPlatform,
   selectedMediaType,
   setSelectedMediaType,
-  limitPerSource,
-  setLimitPerSource,
-  unreadOnly,
-  setUnreadOnly,
   viewMode,
   setViewMode,
   isLoading,
-  refreshingPlatform,
-  onRefresh,
-  onRefreshPlatform,
 }: FilterBarProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -83,7 +68,6 @@ export function FilterBar({
     hoverColorClass: string
   ) => {
     const isActive = selectedPlatform === platform;
-    const isThisPlatformRefreshing = refreshingPlatform === platform;
 
     return (
       <div
@@ -110,30 +94,6 @@ export function FilterBar({
         >
           <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : iconColorClass}`} />
           <span>{label}</span>
-        </button>
-
-        <div className={`w-[1px] my-1 ${isActive ? 'bg-white/20' : 'bg-white/10'}`} />
-
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onRefreshPlatform(platform);
-          }}
-          title={`Refresh ${label}`}
-          disabled={isThisPlatformRefreshing || isLoading}
-          className={`flex items-center justify-center px-2 py-1.5 transition-colors focus:outline-none ${
-            isActive
-              ? 'text-white/80 hover:text-white hover:bg-black/10'
-              : 'text-slate-400 hover:text-white hover:bg-white/5'
-          } disabled:opacity-60 disabled:cursor-not-allowed`}
-        >
-          <RotateCw
-            className={`w-3.5 h-3.5 ${
-              isThisPlatformRefreshing
-                ? 'animate-spin text-cyan-400 opacity-100'
-                : 'opacity-70 hover:opacity-100'
-            }`}
-          />
         </button>
       </div>
     );
@@ -231,65 +191,11 @@ export function FilterBar({
             </button>
           </div>
 
-          {/* Global Refresh Button */}
-          <button
-            onClick={onRefresh}
-            disabled={isLoading}
-            title="Refresh All"
-            className="shrink-0 p-2.5 rounded-xl bg-slate-900/60 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white transition-all disabled:opacity-50"
-          >
-            <RotateCw
-              className={`w-4 h-4 ${
-                refreshingPlatform === 'all' || (isLoading && !refreshingPlatform)
-                  ? 'animate-spin text-cyan-400'
-                  : ''
-              }`}
-            />
-          </button>
         </div>
       </div>
 
-      {/* 2. Middle row: Per-Source Cap and Unread Filter */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-1 pb-1 border-t border-white/5 text-xs text-slate-300">
-        {/* Left: Per-Source Limit Selector */}
-        <div className="flex items-center gap-1 bg-slate-900/40 p-1 rounded-xl border border-white/5">
-          <div className="flex items-center gap-1 text-slate-400 px-2 py-0.5">
-            <Layers className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="font-semibold text-[11px] uppercase tracking-wider">Cap / src:</span>
-          </div>
-          {[5, 10, 15, 0].map((l) => (
-            <button
-              key={l}
-              onClick={() => setLimitPerSource(l)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                limitPerSource === l
-                  ? 'bg-cyan-600 text-white shadow-sm shadow-cyan-600/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              {l === 0 ? 'All' : l}
-            </button>
-          ))}
-        </div>
-
-        {/* Right: Unread Only Filter */}
-        <div className="flex items-center gap-2 ml-auto">
-          <button
-            onClick={() => setUnreadOnly(!unreadOnly)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${
-              unreadOnly
-                ? 'bg-cyan-600/30 border-cyan-500/50 text-cyan-300'
-                : 'bg-slate-900/40 border-white/5 text-slate-400 hover:text-white hover:bg-slate-800/50'
-            }`}
-          >
-            {unreadOnly ? <EyeOff className="w-3.5 h-3.5 text-cyan-400" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
-            <span>{unreadOnly ? 'Showing Unread Only' : 'Show All'}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 3. Bottom row: Platform Filter & Refresh Buttons */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none mt-2">
+      {/* 2. Platform Filter & Refresh Buttons */}
+      <div className="flex flex-wrap items-center gap-2 pb-1 mt-2">
         <button
           onClick={() => setSelectedPlatform('all')}
           className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all border shrink-0 ${

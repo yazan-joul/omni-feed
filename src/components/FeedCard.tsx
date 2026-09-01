@@ -27,9 +27,7 @@ interface FeedCardProps {
   item: FeedItem;
   viewMode: 'grid' | 'list';
   isBookmarked: boolean;
-  isRead: boolean;
   onToggleBookmark: (item: FeedItem) => void;
-  onToggleRead?: (id: string) => void;
   onOpenVideo: (item: FeedItem) => void;
   onOpenReader: (item: FeedItem) => void;
   onOpenPodcast: (item: FeedItem) => void;
@@ -39,9 +37,7 @@ export function FeedCard({
   item,
   viewMode,
   isBookmarked,
-  isRead,
   onToggleBookmark,
-  onToggleRead,
   onOpenVideo,
   onOpenReader,
   onOpenPodcast,
@@ -92,11 +88,6 @@ export function FeedCard({
     onToggleBookmark(item);
   };
 
-  const handleToggleRead = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onToggleRead?.(item.id);
-  };
-
   const isVideo = item.mediaType === 'video';
   const isPodcast = item.mediaType === 'podcast';
   
@@ -129,9 +120,7 @@ export function FeedCard({
     return (
       <article
         onClick={handleCardClick}
-        className={`group glass-panel rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer hover:border-cyan-500/40 hover:bg-slate-800/40 transition-all ${
-          isRead ? 'opacity-40 grayscale-[50%] bg-slate-900/30' : 'opacity-100'
-        }`}
+        className={`group glass-panel rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer hover:border-cyan-500/40 hover:bg-slate-800/40 transition-all`}
       >
         {/* Left: Thumbnail & Title */}
         <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -219,9 +208,7 @@ export function FeedCard({
             </div>
 
             {/* Title */}
-            <h3 className={`font-semibold transition-colors line-clamp-1 text-sm sm:text-base ${
-              isRead ? 'text-slate-400 line-through' : 'text-slate-100 group-hover:text-cyan-300'
-            }`}>
+            <h3 className={`font-semibold transition-colors line-clamp-1 text-sm sm:text-base text-slate-100 group-hover:text-cyan-300`}>
               {item.title}
             </h3>
 
@@ -236,19 +223,7 @@ export function FeedCard({
 
         {/* Right: Actions */}
         <div className="flex items-center gap-1 self-end sm:self-center">
-          {onToggleRead && (
-            <button
-              onClick={handleToggleRead}
-              title={isRead ? 'Mark as Unread' : 'Mark as Read'}
-              className={`p-2 rounded-xl border transition-all ${
-                isRead
-                  ? 'bg-emerald-600/20 border-emerald-500/40 text-emerald-400'
-                  : 'bg-slate-800/60 border-white/10 text-slate-400 hover:text-white'
-              }`}
-            >
-              <CheckCircle2 className={`w-4 h-4 ${isRead ? 'fill-emerald-400/20' : ''}`} />
-            </button>
-          )}
+          
           <button
             onClick={handleBookmarkClick}
             title={isBookmarked ? 'Remove Bookmark' : 'Bookmark'}
@@ -286,9 +261,7 @@ export function FeedCard({
   return (
     <article
       onClick={handleCardClick}
-      className={`group glass-panel rounded-2xl overflow-hidden flex flex-col cursor-pointer border border-white/10 hover:border-cyan-500/50 hover:shadow-xl hover:shadow-cyan-500/10 transition-all duration-300 ${
-        isRead ? 'opacity-40 grayscale-[50%]' : 'opacity-100'
-      }`}
+      className={`group glass-panel rounded-2xl overflow-hidden flex flex-col cursor-pointer border border-white/10 hover:border-cyan-500/50 hover:shadow-xl hover:shadow-cyan-500/10 transition-all duration-300`}
     >
       {/* Media Image Header */}
       <div
@@ -420,9 +393,7 @@ export function FeedCard({
           </div>
 
           {/* Title */}
-          <h3 className={`font-semibold transition-colors line-clamp-2 text-base leading-snug ${
-            isRead ? 'text-slate-400 line-through' : 'text-slate-100 group-hover:text-cyan-300'
-          }`}>
+          <h3 className={`font-semibold transition-colors line-clamp-2 text-base leading-snug text-slate-100 group-hover:text-cyan-300`}>
             {item.title}
           </h3>
 
@@ -444,19 +415,7 @@ export function FeedCard({
           </button>
 
           <div className="flex items-center gap-1.5">
-            {onToggleRead && (
-              <button
-                onClick={handleToggleRead}
-                title={isRead ? 'Mark as Unread' : 'Mark as Read'}
-                className={`p-1.5 rounded-lg border transition-all ${
-                  isRead
-                    ? 'bg-emerald-600/20 border-emerald-500/40 text-emerald-400'
-                    : 'bg-slate-800/60 border-white/10 text-slate-400 hover:text-white'
-                }`}
-              >
-                <CheckCircle2 className={`w-3.5 h-3.5 ${isRead ? 'fill-emerald-400/20' : ''}`} />
-              </button>
-            )}
+            
             <button
               onClick={handleBookmarkClick}
               title={isBookmarked ? 'Remove Bookmark' : 'Save Bookmark'}

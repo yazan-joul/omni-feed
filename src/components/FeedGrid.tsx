@@ -11,10 +11,7 @@ interface FeedGridProps {
   onLoadMore?: () => void;
   viewMode: 'grid' | 'list';
   isBookmarked: (id: string) => boolean;
-  isRead: (id: string) => boolean;
   onToggleBookmark: (item: FeedItem) => void;
-  onToggleRead?: (id: string) => void;
-  onMarkAllAsRead?: (ids: string[]) => void;
   onOpenVideo: (item: FeedItem) => void;
   onOpenReader: (item: FeedItem) => void;
   onOpenPodcast: (item: FeedItem) => void;
@@ -31,10 +28,7 @@ export function FeedGrid({
   onLoadMore,
   viewMode,
   isBookmarked,
-  isRead,
   onToggleBookmark,
-  onToggleRead,
-  onMarkAllAsRead,
   onOpenVideo,
   onOpenReader,
   onOpenPodcast,
@@ -128,9 +122,7 @@ export function FeedGrid({
                 item={item}
                 viewMode={viewMode}
                 isBookmarked={isBookmarked(item.id)}
-                isRead={isRead(item.id)}
                 onToggleBookmark={onToggleBookmark}
-                onToggleRead={onToggleRead}
                 onOpenVideo={onOpenVideo}
                 onOpenReader={onOpenReader}
                 onOpenPodcast={onOpenPodcast}
@@ -167,9 +159,7 @@ export function FeedGrid({
                   item={item}
                   viewMode={viewMode}
                   isBookmarked={isBookmarked(item.id)}
-                  isRead={isRead(item.id)}
                   onToggleBookmark={onToggleBookmark}
-                  onToggleRead={onToggleRead}
                   onOpenVideo={onOpenVideo}
                   onOpenReader={onOpenReader}
                   onOpenPodcast={onOpenPodcast}
