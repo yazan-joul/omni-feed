@@ -136,18 +136,26 @@ export function FeedGrid({
       ) : (
         <>
           <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5' : 'space-y-4'}>
-            {items.filter(isItemToday).map(item => (
-              <FeedCard
-                key={item.id}
-                item={item}
-                viewMode={viewMode}
-                isBookmarked={isBookmarked(item.id)}
-                onToggleBookmark={onToggleBookmark}
-                onOpenVideo={onOpenVideo}
-                onOpenReader={onOpenReader}
-                onOpenPodcast={onOpenPodcast}
-              />
-            ))}
+            {items.filter(isItemToday).map(item => {
+              const normUrl = item.url
+                ? item.url.toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '').split('?')[0]
+                : '';
+              const normTitle = item.title ? item.title.trim().toLowerCase() : '';
+              const stableKey = (normTitle.length > 15 && !normTitle.startsWith('post by @'))
+                ? normTitle : (normUrl || item.id);
+              return (
+                <FeedCard
+                  key={stableKey}
+                  item={item}
+                  viewMode={viewMode}
+                  isBookmarked={isBookmarked(item.id)}
+                  onToggleBookmark={onToggleBookmark}
+                  onOpenVideo={onOpenVideo}
+                  onOpenReader={onOpenReader}
+                  onOpenPodcast={onOpenPodcast}
+                />
+              );
+            })}
           </div>
 
           {todayCount > 0 && !isBookmarksView && (items.length > todayCount || !hasMore) && (
@@ -173,18 +181,26 @@ export function FeedGrid({
 
           {items.length > todayCount && (
             <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5' : 'space-y-4'}>
-              {items.filter(i => !isItemToday(i)).map(item => (
-                <FeedCard
-                  key={item.id}
-                  item={item}
-                  viewMode={viewMode}
-                  isBookmarked={isBookmarked(item.id)}
-                  onToggleBookmark={onToggleBookmark}
-                  onOpenVideo={onOpenVideo}
-                  onOpenReader={onOpenReader}
-                  onOpenPodcast={onOpenPodcast}
-                />
-              ))}
+              {items.filter(i => !isItemToday(i)).map(item => {
+                const normUrl = item.url
+                  ? item.url.toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '').split('?')[0]
+                  : '';
+                const normTitle = item.title ? item.title.trim().toLowerCase() : '';
+                const stableKey = (normTitle.length > 15 && !normTitle.startsWith('post by @'))
+                  ? normTitle : (normUrl || item.id);
+                return (
+                  <FeedCard
+                    key={stableKey}
+                    item={item}
+                    viewMode={viewMode}
+                    isBookmarked={isBookmarked(item.id)}
+                    onToggleBookmark={onToggleBookmark}
+                    onOpenVideo={onOpenVideo}
+                    onOpenReader={onOpenReader}
+                    onOpenPodcast={onOpenPodcast}
+                  />
+                );
+              })}
             </div>
           )}
           

@@ -82,12 +82,13 @@ export function FilterBar({
           onClick={() => {
             setSelectedPlatform(platform);
           }}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
+          className={`flex items-center gap-1 px-2.5 py-1.5 font-medium transition-colors ${
             isActive ? 'text-white' : 'text-slate-300 hover:text-white'
           }`}
+          style={{ fontSize: '11px' }}
         >
-          <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : iconColorClass}`} />
-          <span>{label}</span>
+          <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-white' : iconColorClass}`} />
+          <span className="whitespace-nowrap">{label}</span>
         </button>
       </div>
     );
@@ -96,7 +97,7 @@ export function FilterBar({
   return (
     <div className="flex flex-col gap-2.5 mb-6 relative z-20">
       {/* 1. Top row: Search, Format toggles, Layout toggles */}
-      <div className="flex items-center justify-between gap-2 bg-slate-900/40 p-1.5 sm:p-2 rounded-2xl border border-white/5 backdrop-blur-xl shadow-2xl overflow-x-auto scrollbar-none">
+      <div className="flex items-center justify-between gap-2 bg-slate-900/40 p-1.5 rounded-2xl border border-white/5 backdrop-blur-xl shadow-2xl overflow-x-auto scrollbar-none" style={{ WebkitTextSizeAdjust: '100%' }}>
         
         {/* Search (Expandable on Mobile) */}
         <div className="relative group transition-all duration-300 w-10 sm:w-48 md:w-64 focus-within:w-40 sm:focus-within:w-64 shrink-0">
@@ -107,7 +108,8 @@ export function FilterBar({
             placeholder="Search..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-8 py-2 rounded-xl bg-slate-950/50 border border-transparent hover:border-white/10 focus:border-cyan-500/50 text-white placeholder-transparent sm:placeholder-slate-500 focus-within:placeholder-slate-500 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-inner cursor-pointer focus:cursor-text"
+            className="w-full pl-9 pr-8 py-2 rounded-xl bg-slate-950/50 border border-transparent hover:border-white/10 focus:border-cyan-500/50 text-white placeholder-transparent sm:placeholder-slate-500 focus-within:placeholder-slate-500 text-[13px] focus:outline-none focus:ring-1 focus:ring-cyan-500/50 transition-all shadow-inner cursor-pointer focus:cursor-text"
+            style={{ fontSize: '13px' }}
           />
           {searchQuery && (
             <button
@@ -121,22 +123,21 @@ export function FilterBar({
         </div>
 
         {/* Right Controls */}
-        <div className="flex items-center justify-end gap-1.5 sm:gap-2 overflow-x-auto scrollbar-none ml-auto">
+        <div className="flex items-center justify-end gap-1.5 overflow-x-auto scrollbar-none ml-auto shrink-0">
           {/* Media Format Toggles */}
           <div className="flex items-center bg-slate-950/50 p-1 rounded-xl border border-white/5 shrink-0">
             <button
               onClick={() => setSelectedMediaType('all')}
-              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              className={`px-2 py-1.5 rounded-lg font-medium transition-all shrink-0 ${
                 selectedMediaType === 'all' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
+              style={{ fontSize: '11px' }}
             >
               All Types
             </button>
-            <div className="w-px h-4 bg-white/10 mx-0.5 sm:mx-1" />
+            <div className="w-px h-4 bg-white/10 mx-0.5" />
             <button
-              onClick={() => {
-                setSelectedMediaType('article');
-              }}
+              onClick={() => setSelectedMediaType('article')}
               title="Articles & Posts"
               aria-label="Filter by Articles & Posts"
               className={`p-1.5 rounded-lg transition-all ${
@@ -146,9 +147,7 @@ export function FilterBar({
               <FileText className="w-4 h-4" />
             </button>
             <button
-              onClick={() => {
-                setSelectedMediaType('video');
-              }}
+              onClick={() => setSelectedMediaType('video')}
               title="Videos"
               aria-label="Filter by Videos"
               className={`p-1.5 rounded-lg transition-all ${
@@ -158,9 +157,7 @@ export function FilterBar({
               <Video className="w-4 h-4" />
             </button>
             <button
-              onClick={() => {
-                setSelectedMediaType('podcast');
-              }}
+              onClick={() => setSelectedMediaType('podcast')}
               title="Podcasts"
               aria-label="Filter by Podcasts"
               className={`p-1.5 rounded-lg transition-all ${
