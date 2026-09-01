@@ -128,19 +128,35 @@ export async function GET(request: NextRequest) {
         if (missingCustomIds.length > 0) {
           try {
             let addedNewItems = false;
-            for (const missingId of missingCustomIds) {
-              const snap = await withTimeout<any>(
+            
+            // Firebase 'in' queries support max 30 items
+            const chunkSize = 30;
+            const chunks = [];
+            for (let i = 0; i < missingCustomIds.length; i += chunkSize) {
+              chunks.push(missingCustomIds.slice(i, i + chunkSize));
+            }
+
+            const fetchPromises = chunks.map(chunk => 
+              withTimeout<any>(
                 db.collection('feed_items')
-                  .where('sourceId', '==', missingId)
+                  .where('sourceId', 'in', chunk)
                   .limit(parseInt(process.env.FEED_CUSTOM_FETCH_LIMIT || '50', 10))
                   .get(),
                 3000
-              );
-              snap.forEach((doc: any) => {
-                globalFeedCache!.push({ id: doc.id, ...doc.data() } as FeedItem);
-                addedNewItems = true;
-              });
-            }
+              )
+            );
+
+            const results = await Promise.allSettled(fetchPromises);
+            
+            results.forEach(result => {
+              if (result.status === 'fulfilled' && !result.value.empty) {
+                result.value.forEach((doc: any) => {
+                  globalFeedCache!.push({ id: doc.id, ...doc.data() } as FeedItem);
+                  addedNewItems = true;
+                });
+              }
+            });
+
             if (addedNewItems) {
               const uniqueItems = new Map<string, FeedItem>();
               for (const item of globalFeedCache!) {
