@@ -11,16 +11,6 @@ export const DEFAULT_FEED_SOURCES: FeedSource[] = [
     description: 'Code tutorials and tech news in 100 seconds.',
     enabled: true,
   },
-  {
-    id: 'yt-theo',
-    name: 'Theo - t3.gg',
-    platform: 'youtube',
-    url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCbRP3c757lWg9M-U7TyEkXA',
-    channelId: 'UCbRP3c757lWg9M-U7TyEkXA',
-    description: 'Web development, React, Next.js, and tech commentary.',
-    enabled: true,
-  },
-
   // --- Podcasts (Curated) ---
   {
     id: 'pod-syntax',
@@ -40,14 +30,6 @@ export const DEFAULT_FEED_SOURCES: FeedSource[] = [
   },
 
   // --- Articles, News & Publications (Curated) ---
-  {
-    id: 'rss-theverge',
-    name: 'The Verge',
-    platform: 'rss',
-    url: 'https://www.theverge.com/rss/index.xml',
-    description: 'Covering technology, science, and digital culture.',
-    enabled: true,
-  },
   {
     id: 'rss-github-blog',
     name: 'GitHub Engineering',
@@ -75,11 +57,11 @@ export const DEFAULT_FEED_SOURCES: FeedSource[] = [
     enabled: true,
   },
   {
-    id: 'social-localllama',
-    name: 'r/LocalLLaMA',
+    id: 'social-softwarearchitecture',
+    name: 'r/SoftwareArchitecture',
     platform: 'reddit',
-    url: 'https://reddit.com/r/LocalLLaMA',
-    description: 'Open-source LLMs, quantization, local AI benchmarks, and architectures.',
+    url: 'https://reddit.com/r/SoftwareArchitecture',
+    description: 'Low-volume discussions on system design and software architecture principles.',
     enabled: true,
   }
 ];
