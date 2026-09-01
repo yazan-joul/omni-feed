@@ -18,6 +18,7 @@ interface FeedGridProps {
   onResetFilters?: () => void;
   onOpenAddModal?: () => void;
   failedSources?: string[];
+  isBookmarksView?: boolean;
 }
 
 export function FeedGrid({
@@ -35,6 +36,7 @@ export function FeedGrid({
   onResetFilters,
   onOpenAddModal,
   failedSources = [],
+  isBookmarksView = false,
 }: FeedGridProps) {
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -63,12 +65,13 @@ export function FeedGrid({
   const now = Date.now();
   const dayMs = 24 * 60 * 60 * 1000;
   const isItemToday = (item: FeedItem) => {
+    if (isBookmarksView) return true; // Treat all bookmarks as a single block
     const pubTime = new Date(item.publishedAt).getTime();
     if (isNaN(pubTime)) return false;
     return now - pubTime < dayMs;
   };
 
-  let todayCount = items.filter(isItemToday).length;
+  let todayCount = isBookmarksView ? items.length : items.filter(isItemToday).length;
 
   return (
     <div className="space-y-8">
@@ -147,7 +150,7 @@ export function FeedGrid({
             ))}
           </div>
 
-          {todayCount > 0 && (items.length > todayCount || !hasMore) && (
+          {todayCount > 0 && !isBookmarksView && (items.length > todayCount || !hasMore) && (
             <div className="pt-6 pb-2">
               <div className="glass-panel rounded-2xl p-4 sm:p-5 text-center border border-cyan-500/20 bg-cyan-950/20 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg shadow-cyan-950/30">
                 <div className="flex items-center gap-3">

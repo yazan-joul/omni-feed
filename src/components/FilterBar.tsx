@@ -140,7 +140,10 @@ export function FilterBar({
             </button>
             <div className="w-px h-4 bg-white/10 mx-0.5 sm:mx-1" />
             <button
-              onClick={() => setSelectedMediaType('article')}
+              onClick={() => {
+                setSelectedMediaType('article');
+                if (selectedPlatform === 'youtube' || selectedPlatform === 'instagram') setSelectedPlatform('all');
+              }}
               title="Articles & Posts"
               className={`p-1.5 rounded-lg transition-all ${
                 selectedMediaType === 'article' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
@@ -149,7 +152,10 @@ export function FilterBar({
               <FileText className="w-4 h-4" />
             </button>
             <button
-              onClick={() => setSelectedMediaType('video')}
+              onClick={() => {
+                setSelectedMediaType('video');
+                if (selectedPlatform === 'rss') setSelectedPlatform('all');
+              }}
               title="Videos"
               className={`p-1.5 rounded-lg transition-all ${
                 selectedMediaType === 'video' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
@@ -158,7 +164,10 @@ export function FilterBar({
               <Video className="w-4 h-4" />
             </button>
             <button
-              onClick={() => setSelectedMediaType('podcast')}
+              onClick={() => {
+                setSelectedMediaType('podcast');
+                if (selectedPlatform === 'youtube' || selectedPlatform === 'instagram' || selectedPlatform === 'facebook' || selectedPlatform === 'twitter' || selectedPlatform === 'reddit') setSelectedPlatform('all');
+              }}
               title="Podcasts"
               className={`p-1.5 rounded-lg transition-all ${
                 selectedMediaType === 'podcast' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'

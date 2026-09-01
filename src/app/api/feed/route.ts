@@ -9,7 +9,6 @@ export const dynamic = 'force-dynamic';
 // Global Cache State (persists perfectly in long-running Node processes like Railway)
 let globalFeedCache: FeedItem[] | null = null;
 let lastCacheTime = 0;
-let isRefreshing = false;
 const CACHE_TTL = 3 * 60 * 1000; // 3 minutes
 const CACHE_SIZE = parseInt(process.env.FEED_CACHE_SIZE || '500', 10); // Configurable cache size
 
@@ -22,31 +21,37 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number = 15000): Promise
   ]);
 }
 
+let refreshPromise: Promise<void> | null = null;
+
 async function refreshCache() {
-  if (isRefreshing) return;
-  isRefreshing = true;
-  try {
-    const snapshot = await withTimeout(
-      db.collection('feed_items')
-        .orderBy('publishedAt', 'desc')
-        .limit(CACHE_SIZE)
-        .get(),
-      15000
-    );
+  if (refreshPromise) return refreshPromise;
+  
+  refreshPromise = (async () => {
+    try {
+      const snapshot = await withTimeout(
+        db.collection('feed_items')
+          .orderBy('publishedAt', 'desc')
+          .limit(CACHE_SIZE)
+          .get(),
+        15000
+      );
 
-    const items: FeedItem[] = [];
-    snapshot.forEach((doc) => {
-      items.push({ id: doc.id, ...doc.data() } as FeedItem);
-    });
+      const items: FeedItem[] = [];
+      snapshot.forEach((doc) => {
+        items.push({ id: doc.id, ...doc.data() } as FeedItem);
+      });
 
-    globalFeedCache = items;
-    lastCacheTime = Date.now();
-    console.log(`[Cache] Background refresh complete. Loaded ${items.length} items.`);
-  } catch (error) {
-    console.error('[Cache] Failed to refresh:', error);
-  } finally {
-    isRefreshing = false;
-  }
+      globalFeedCache = items;
+      lastCacheTime = Date.now();
+      console.log(`[Cache] Background refresh complete. Loaded ${items.length} items.`);
+    } catch (error) {
+      console.error('[Cache] Failed to refresh:', error);
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
 }
 
 export async function GET(request: NextRequest) {
@@ -148,10 +153,11 @@ export async function GET(request: NextRequest) {
 
             const results = await Promise.allSettled(fetchPromises);
             
+            const tempNewItems: FeedItem[] = [];
             results.forEach(result => {
               if (result.status === 'fulfilled' && !result.value.empty) {
                 result.value.forEach((doc: any) => {
-                  globalFeedCache!.push({ id: doc.id, ...doc.data() } as FeedItem);
+                  tempNewItems.push({ id: doc.id, ...doc.data() } as FeedItem);
                   addedNewItems = true;
                 });
               }
@@ -162,14 +168,18 @@ export async function GET(request: NextRequest) {
               for (const item of globalFeedCache!) {
                 uniqueItems.set(item.id, item);
               }
-              globalFeedCache = Array.from(uniqueItems.values());
-              globalFeedCache.sort((a, b) => {
+              for (const item of tempNewItems) {
+                uniqueItems.set(item.id, item);
+              }
+              const newCache = Array.from(uniqueItems.values());
+              newCache.sort((a, b) => {
                 const tA = new Date(a.publishedAt).getTime();
                 const tB = new Date(b.publishedAt).getTime();
                 const validA = isNaN(tA) ? 0 : tA;
                 const validB = isNaN(tB) ? 0 : tB;
                 return validB - validA;
               });
+              globalFeedCache = newCache;
             }
           } catch (e) {
             console.warn('[Feed] Failed to fetch missing custom source items:', e);
@@ -236,9 +246,9 @@ export async function GET(request: NextRequest) {
       }
 
       const docs = snapshot.docs;
-      currentCursor = docs[docs.length - 1].data().publishedAt;
       
       for (const doc of docs) {
+        currentCursor = doc.data().publishedAt;
         const item = doc.data() as FeedItem;
         
         if (!activeSourceIds.has(item.sourceId)) continue;

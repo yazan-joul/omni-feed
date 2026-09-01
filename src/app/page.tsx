@@ -170,12 +170,12 @@ export default function HomePage() {
     setError(null);
     setFailedSources([]);
 
-    // Cancel any in-flight request to prevent race conditions (only if not loading more)
-    if (!isLoadMore && fetchAbortController.current) {
+    // Cancel any in-flight request to prevent race conditions
+    if (fetchAbortController.current) {
       fetchAbortController.current.abort();
     }
     const abortController = new AbortController();
-    if (!isLoadMore) fetchAbortController.current = abortController;
+    fetchAbortController.current = abortController;
 
     try {
       const params = new URLSearchParams();
@@ -244,7 +244,7 @@ export default function HomePage() {
       }
 
       // Ensure this is still the most recent request
-      if (!isLoadMore && abortController.signal.aborted) return;
+      if (abortController.signal.aborted) return;
 
       if (data.success && Array.isArray(data.items)) {
         if (isLoadMore) {
@@ -302,6 +302,7 @@ export default function HomePage() {
   const handleRefreshPlatform = async (platform: ContentPlatform) => {
     setIsLoading(true);
     try {
+      feedCache.current = {}; // Invalidate cache so fresh data persists across filter changes
       const res = await fetch(`/api/feed?platform=${platform}&forceRefresh=true`);
       if (res.ok) {
         const data = await res.json();
@@ -470,6 +471,7 @@ export default function HomePage() {
           onOpenVideo={handleOpenVideo}
           onOpenReader={handleOpenReader}
           onOpenPodcast={handleOpenPodcast}
+          isBookmarksView={activeTab === 'bookmarks'}
           onResetFilters={() => {
             setSearchQuery('');
             setSelectedPlatform('all');
