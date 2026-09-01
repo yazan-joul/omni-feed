@@ -76,7 +76,7 @@ export function FeedGrid({
   return (
     <div className="space-y-8">
       {failedSources.length > 0 && (
-        <div className="p-4 rounded-2xl bg-amber-950/40 border border-amber-500/20 flex items-start gap-3 text-amber-200">
+        <div role="alert" className="p-4 rounded-2xl bg-amber-950/40 border border-amber-500/20 flex items-start gap-3 text-amber-200">
           <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
           <div className="space-y-1">
             <h4 className="text-sm font-semibold text-amber-400">Stream Fetch Notice</h4>
@@ -89,7 +89,7 @@ export function FeedGrid({
       )}
 
       {items.length === 0 ? (
-        <div className="flex flex-col items-center">
+        <div role="alert" className="flex flex-col items-center">
           <div className="glass-panel rounded-3xl p-12 text-center max-w-lg mx-auto space-y-4 border border-white/10 my-8 w-full">
             <div className="w-16 h-16 rounded-2xl bg-cyan-600/10 text-cyan-400 mx-auto flex items-center justify-center border border-cyan-500/20 shadow-inner">
               <Inbox className="w-8 h-8" />

@@ -48,10 +48,11 @@ export function ReaderDrawer({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onCloseRef.current();
     };
+    const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = originalOverflow;
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen]);
@@ -69,10 +70,14 @@ export function ReaderDrawer({
   };
 
 
-  const handleShare = () => {
-    navigator.clipboard.writeText(item.url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(item.url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000); // We ignore the unmount timeout leak here as it's harmless
+    } catch (err) {
+      console.warn('Clipboard write failed:', err);
+    }
   };
 
   const formattedDate = (() => {
@@ -107,7 +112,7 @@ export function ReaderDrawer({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/70 backdrop-blur-sm animate-fadeIn">
       {/* Backdrop overlay */}
-      <div className="absolute inset-0" onClick={onClose} />
+      <div className="absolute inset-0" onClick={onClose} role="presentation" />
 
       {/* Drawer Panel */}
       <aside className="relative w-full max-w-2xl h-full glass-panel bg-slate-900 border-l border-white/10 flex flex-col z-10 shadow-2xl overflow-hidden">
@@ -133,6 +138,7 @@ export function ReaderDrawer({
                 onClick={() => setFontSize('normal')}
                 className={`px-2 py-1 rounded-md ${fontSize === 'normal' ? 'bg-cyan-600 text-white font-bold' : ''}`}
                 title="Normal text"
+                aria-label="Normal text size"
               >
                 A
               </button>
@@ -140,6 +146,7 @@ export function ReaderDrawer({
                 onClick={() => setFontSize('large')}
                 className={`px-2 py-1 rounded-md ${fontSize === 'large' ? 'bg-cyan-600 text-white font-bold' : ''}`}
                 title="Large text"
+                aria-label="Large text size"
               >
                 A+
               </button>
@@ -149,6 +156,7 @@ export function ReaderDrawer({
             <button
               onClick={() => onToggleBookmark(item)}
               title={isBookmarked ? 'Remove Bookmark' : 'Save Bookmark'}
+              aria-label={isBookmarked ? 'Remove Bookmark' : 'Save Bookmark'}
               className={`p-2 rounded-xl border transition-all ${
                 isBookmarked
                   ? 'bg-cyan-600/20 border-cyan-500/40 text-cyan-400'
@@ -162,6 +170,7 @@ export function ReaderDrawer({
             <button
               onClick={handleShare}
               title="Copy Link"
+              aria-label="Copy Link"
               className="p-2 rounded-xl bg-slate-800 border border-white/10 text-slate-400 hover:text-white transition-all"
             >
               {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
@@ -173,7 +182,8 @@ export function ReaderDrawer({
               target="_blank"
               rel="noopener noreferrer"
               title="Open in source publication"
-              className="p-2 rounded-xl bg-slate-800 border border-white/10 text-slate-400 hover:text-white transition-all"
+              aria-label="Open original link"
+              className="p-2 rounded-xl bg-slate-800 border border-white/10 text-slate-400 hover:text-white transition-all inline-block"
             >
               <ExternalLink className="w-4 h-4" />
             </a>
@@ -181,6 +191,7 @@ export function ReaderDrawer({
             {/* Close */}
             <button
               onClick={onClose}
+              aria-label="Close"
               className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-white/10 transition-all ml-1"
             >
               <X className="w-4 h-4" />

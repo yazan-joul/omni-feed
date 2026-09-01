@@ -44,20 +44,25 @@ export function VideoPlayerModal({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onCloseRef.current();
     };
+    const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = originalOverflow;
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen]);
 
   if (!isOpen || !item) return null;
 
-  const handleShare = () => {
-    navigator.clipboard.writeText(item.url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(item.url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000); // We ignore the unmount timeout leak here as it's harmless
+    } catch (err) {
+      console.warn('Clipboard write failed:', err);
+    }
   };
 
   const formattedDate = (() => {
@@ -71,7 +76,7 @@ export function VideoPlayerModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 md:p-10 bg-black/80 backdrop-blur-md animate-fadeIn">
       {/* Backdrop overlay */}
-      <div className="absolute inset-0" onClick={onClose} />
+      <div className="absolute inset-0" onClick={onClose} role="presentation" />
 
       {/* Modal Content */}
       <div className="relative w-full max-w-4xl max-h-[90vh] glass-panel rounded-3xl overflow-hidden shadow-2xl border border-white/10 flex flex-col z-10 bg-slate-900">
@@ -91,6 +96,7 @@ export function VideoPlayerModal({
             <button
               onClick={() => onToggleBookmark(item)}
               title={isBookmarked ? 'Remove Bookmark' : 'Save Bookmark'}
+              aria-label={isBookmarked ? 'Remove Bookmark' : 'Save Bookmark'}
               className={`p-2 rounded-xl border transition-all ${
                 isBookmarked
                   ? 'bg-cyan-600/20 border-cyan-500/40 text-cyan-400'
@@ -102,6 +108,7 @@ export function VideoPlayerModal({
             <button
               onClick={handleShare}
               title="Copy Link"
+              aria-label="Copy Link"
               className="p-2 rounded-xl bg-slate-800 border border-white/10 text-slate-400 hover:text-white transition-all"
             >
               {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
@@ -111,12 +118,14 @@ export function VideoPlayerModal({
               target="_blank"
               rel="noopener noreferrer"
               title="Open in YouTube"
-              className="p-2 rounded-xl bg-slate-800 border border-white/10 text-slate-400 hover:text-white transition-all"
+              aria-label="Open in YouTube"
+              className="p-2 rounded-xl bg-slate-800 border border-white/10 text-slate-400 hover:text-white transition-all inline-block"
             >
               <ExternalLink className="w-4 h-4" />
             </a>
             <button
               onClick={onClose}
+              aria-label="Close"
               className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-white/10 transition-all ml-2"
             >
               <X className="w-4 h-4" />

@@ -41,6 +41,10 @@ export class YouTubeAdapter implements FeedAdapter {
       return channelIdCache.get(clean)!;
     }
 
+    if (channelIdCache.size > 1000) {
+      channelIdCache.clear();
+    }
+
     // Extract channel_id from feed URL query
     const feedMatch = clean.match(/channel_id=(UC[a-zA-Z0-9_-]{22})/i);
     if (feedMatch && feedMatch[1]) {

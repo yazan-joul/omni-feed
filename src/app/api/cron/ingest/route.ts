@@ -122,24 +122,31 @@ async function handleIngest(request: NextRequest) {
       return true;
     });
 
-    const results = await Promise.allSettled(
-      sourcesToScrape.map(async (source) => {
-        let items: FeedItem[] = [];
-        
-        const isSocial = ['instagram', 'facebook', 'twitter'].includes(source.platform);
-        // Generous timeout for background ingestion (60 seconds for social)
-        const timeoutMs = isSocial ? 65000 : 15000;
-        
-        if (source.platform === 'youtube') items = await fetchWithRetry(() => ytAdapter.fetchFeed(source), timeoutMs, source.name);
-        else if (source.platform === 'instagram') items = await fetchWithRetry(() => instagramAdapter.fetchFeed(source), timeoutMs, source.name);
-        else if (source.platform === 'facebook') items = await fetchWithRetry(() => facebookAdapter.fetchFeed(source), timeoutMs, source.name);
-        else if (source.platform === 'twitter') items = await fetchWithRetry(() => twitterAdapter.fetchFeed(source), timeoutMs, source.name);
-        else if (source.platform === 'reddit') items = await fetchWithRetry(() => redditAdapter.fetchFeed(source), timeoutMs, source.name);
-        else items = await fetchWithRetry(() => rssAdapter.fetchFeed(source), timeoutMs, source.name);
-        
-        return { sourceName: source.name, items };
-      })
-    );
+    const CONCURRENCY_LIMIT = 5;
+    const results: PromiseSettledResult<{sourceName: string; items: FeedItem[]}>[] = [];
+    
+    for (let i = 0; i < sourcesToScrape.length; i += CONCURRENCY_LIMIT) {
+      const chunk = sourcesToScrape.slice(i, i + CONCURRENCY_LIMIT);
+      const chunkResults = await Promise.allSettled(
+        chunk.map(async (source) => {
+          let items: FeedItem[] = [];
+          
+          const isSocial = ['instagram', 'facebook', 'twitter'].includes(source.platform);
+          // Generous timeout for background ingestion (60 seconds for social)
+          const timeoutMs = isSocial ? 65000 : 15000;
+          
+          if (source.platform === 'youtube') items = await fetchWithRetry(() => ytAdapter.fetchFeed(source), timeoutMs, source.name);
+          else if (source.platform === 'instagram') items = await fetchWithRetry(() => instagramAdapter.fetchFeed(source), timeoutMs, source.name);
+          else if (source.platform === 'facebook') items = await fetchWithRetry(() => facebookAdapter.fetchFeed(source), timeoutMs, source.name);
+          else if (source.platform === 'twitter') items = await fetchWithRetry(() => twitterAdapter.fetchFeed(source), timeoutMs, source.name);
+          else if (source.platform === 'reddit') items = await fetchWithRetry(() => redditAdapter.fetchFeed(source), timeoutMs, source.name);
+          else items = await fetchWithRetry(() => rssAdapter.fetchFeed(source), timeoutMs, source.name);
+          
+          return { sourceName: source.name, items };
+        })
+      );
+      results.push(...chunkResults);
+    }
     
     let totalIngested = 0;
     const errors: string[] = [];
@@ -163,12 +170,20 @@ async function handleIngest(request: NextRequest) {
         const uniqueString = item.id;
         const safeId = Buffer.from(uniqueString).toString('base64').replace(/[/+=]/g, '_');
         
+        // Strip out 'undefined' values which cause Firestore batch.set to synchronously throw
+        const cleanItem = JSON.parse(JSON.stringify(item));
+        
         const docRef = db.collection('feed_items').doc(safeId);
-        batch.set(docRef, item, { merge: true });
-        totalIngested++;
+        batch.set(docRef, cleanItem, { merge: true });
       });
       
-      await batch.commit();
+      try {
+        await batch.commit();
+        totalIngested += chunk.length;
+      } catch (batchErr: any) {
+        console.error('[Batch Error] Failed to commit chunk:', batchErr.message);
+        errors.push(`Batch commit failed: ${batchErr.message}`);
+      }
     }
     
     // Update sync status for successfully scraped sources
@@ -191,16 +206,23 @@ async function handleIngest(request: NextRequest) {
       const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
       const thirtyDaysAgoIso = new Date(Date.now() - THIRTY_DAYS_MS).toISOString();
       
-      const oldDocsSnap = await db.collection('feed_items')
-        .where('publishedAt', '<', thirtyDaysAgoIso)
-        .limit(300)
-        .get();
-        
-      if (!oldDocsSnap.empty) {
-        const deleteBatch = db.batch();
-        oldDocsSnap.forEach(doc => deleteBatch.delete(doc.ref));
-        await deleteBatch.commit();
-        deletedCount = oldDocsSnap.size;
+      let hasMoreOldDocs = true;
+      while (hasMoreOldDocs) {
+        const oldDocsSnap = await db.collection('feed_items')
+          .where('publishedAt', '<', thirtyDaysAgoIso)
+          .limit(300)
+          .get();
+          
+        if (oldDocsSnap.empty) {
+          hasMoreOldDocs = false;
+        } else {
+          const deleteBatch = db.batch();
+          oldDocsSnap.forEach(doc => deleteBatch.delete(doc.ref));
+          await deleteBatch.commit();
+          deletedCount += oldDocsSnap.size;
+        }
+      }
+      if (deletedCount > 0) {
         console.log(`[Cleanup] Deleted ${deletedCount} feed items older than 30 days.`);
       }
     } catch (cleanupErr: any) {

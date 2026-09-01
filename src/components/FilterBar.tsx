@@ -96,7 +96,7 @@ export function FilterBar({
   return (
     <div className="flex flex-col gap-2.5 mb-6 relative z-20">
       {/* 1. Top row: Search, Format toggles, Layout toggles */}
-      <div className="flex items-center justify-between gap-2 bg-slate-900/40 p-1.5 sm:p-2 rounded-2xl border border-white/5 backdrop-blur-xl shadow-2xl overflow-hidden">
+      <div className="flex items-center justify-between gap-2 bg-slate-900/40 p-1.5 sm:p-2 rounded-2xl border border-white/5 backdrop-blur-xl shadow-2xl overflow-x-auto scrollbar-none">
         
         {/* Search (Expandable on Mobile) */}
         <div className="relative group transition-all duration-300 w-10 sm:w-48 md:w-64 focus-within:w-40 sm:focus-within:w-64 shrink-0">
@@ -112,6 +112,7 @@ export function FilterBar({
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
+              aria-label="Clear search"
               className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/10 text-slate-400 transition-colors z-10"
             >
               <X className="w-3.5 h-3.5" />
@@ -137,6 +138,7 @@ export function FilterBar({
                 setSelectedMediaType('article');
               }}
               title="Articles & Posts"
+              aria-label="Filter by Articles & Posts"
               className={`p-1.5 rounded-lg transition-all ${
                 selectedMediaType === 'article' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
               }`}
@@ -148,6 +150,7 @@ export function FilterBar({
                 setSelectedMediaType('video');
               }}
               title="Videos"
+              aria-label="Filter by Videos"
               className={`p-1.5 rounded-lg transition-all ${
                 selectedMediaType === 'video' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
               }`}
@@ -159,6 +162,7 @@ export function FilterBar({
                 setSelectedMediaType('podcast');
               }}
               title="Podcasts"
+              aria-label="Filter by Podcasts"
               className={`p-1.5 rounded-lg transition-all ${
                 selectedMediaType === 'podcast' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
               }`}
