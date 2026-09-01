@@ -175,15 +175,18 @@ export function AddFeedModal({ isOpen, onClose, onAddSource, onImportSources, ex
 
       const newSource: FeedSource = {
         id: `custom-${finalPlatform}-${finalUrl.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 40)}`,
-        
         name: sourceName,
         platform: finalPlatform,
         url: finalUrl,
-        channelId: currentValidation.channelId,
-        description: currentValidation.description || `Custom stream from ${finalUrl}`,
         enabled: true,
         isCustom: true,
       };
+      
+      if (currentValidation.channelId) {
+        newSource.channelId = currentValidation.channelId;
+      }
+      
+      newSource.description = currentValidation.description || `Custom stream from ${finalUrl}`;
 
       // Show success animation
       setAddedSuccess(true);
