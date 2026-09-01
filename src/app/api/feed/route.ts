@@ -298,10 +298,10 @@ export async function GET(request: NextRequest) {
     // so the client can continue paginating past large gaps of unfiltered items.
     const nextCursor = hasMoreInDb ? currentCursor : null;
 
-    // Deduplicate validItems by URL to handle older documents with different IDs
+    // Deduplicate validItems by URL (or title+date) to handle older documents with different IDs
     const uniqueMap = new Map<string, FeedItem>();
     for (const item of validItems) {
-      const dedupKey = item.url || item.id;
+      const dedupKey = item.url || `${item.title}-${item.publishedAt}` || item.id;
       if (!uniqueMap.has(dedupKey)) {
         uniqueMap.set(dedupKey, item);
       }

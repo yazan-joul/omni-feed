@@ -234,7 +234,7 @@ export default function HomePage() {
           const uniqueMap = new Map();
           for (const item of allItems) {
             // Deduplicate by URL to prevent duplicates if DB migration changed IDs
-            const dedupKey = item.url || item.id;
+            const dedupKey = item.url || `${item.title}-${item.publishedAt}` || item.id;
             if (!uniqueMap.has(dedupKey)) {
               uniqueMap.set(dedupKey, item);
             }
