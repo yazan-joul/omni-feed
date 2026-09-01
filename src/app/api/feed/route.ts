@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
   const forceRefresh = searchParams.get('forceRefresh') === 'true';
 
   try {
-    const TARGET_ITEMS = parseInt(process.env.FEED_TARGET_ITEMS || '12', 10); 
+    const TARGET_ITEMS = parseInt(process.env.FEED_TARGET_ITEMS || '24', 10); 
     
     // ==========================================
     // FAST PATH: Initial Load (No Cursor) -> Memory Cache
@@ -222,7 +222,7 @@ export async function GET(request: NextRequest) {
 
     while (validItems.length < TARGET_ITEMS && loops < MAX_LOOPS && hasMoreInDb) {
       let query = db.collection('feed_items') as any;
-      query = query.orderBy('publishedAt', 'desc').limit(50);
+      query = query.orderBy('publishedAt', 'desc').limit(200);
         
       if (currentCursor) {
         query = query.startAfter(currentCursor);
@@ -259,7 +259,9 @@ export async function GET(request: NextRequest) {
       loops++;
     }
 
-    const nextCursor = (hasMoreInDb && validItems.length > 0) ? currentCursor : null;
+    // We must return the cursor as long as hasMoreInDb is true, even if validItems is empty,
+    // so the client can continue paginating past large gaps of unfiltered items.
+    const nextCursor = hasMoreInDb ? currentCursor : null;
 
     return NextResponse.json({
       success: true,

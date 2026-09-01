@@ -86,32 +86,49 @@ export function FeedGrid({
       )}
 
       {items.length === 0 ? (
-        <div className="glass-panel rounded-3xl p-12 text-center max-w-lg mx-auto space-y-4 border border-white/10 my-8">
-          <div className="w-16 h-16 rounded-2xl bg-cyan-600/10 text-cyan-400 mx-auto flex items-center justify-center border border-cyan-500/20 shadow-inner">
-            <Inbox className="w-8 h-8" />
+        <div className="flex flex-col items-center">
+          <div className="glass-panel rounded-3xl p-12 text-center max-w-lg mx-auto space-y-4 border border-white/10 my-8 w-full">
+            <div className="w-16 h-16 rounded-2xl bg-cyan-600/10 text-cyan-400 mx-auto flex items-center justify-center border border-cyan-500/20 shadow-inner">
+              <Inbox className="w-8 h-8" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-100">No content matches your filter in recent posts</h3>
+            <p className="text-sm text-slate-400">
+              Try adjusting your search query, or load older posts to see if there is a match further back.
+            </p>
+            <div className="flex items-center justify-center gap-3 pt-2">
+              {onResetFilters && (
+                <button
+                  onClick={onResetFilters}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium transition-all"
+                >
+                  Reset Filters
+                </button>
+              )}
+              {onOpenAddModal && (
+                <button
+                  onClick={onOpenAddModal}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-medium shadow-md shadow-cyan-600/20 transition-all"
+                >
+                  Add Feed
+                </button>
+              )}
+            </div>
           </div>
-          <h3 className="text-xl font-bold text-slate-100">No content matches your filter</h3>
-          <p className="text-sm text-slate-400">
-            Try adjusting your search query, switching platforms, or extending your time filter.
-          </p>
-          <div className="flex items-center justify-center gap-3 pt-2">
-            {onResetFilters && (
-              <button
-                onClick={onResetFilters}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium transition-all"
-              >
-                Reset Filters
-              </button>
-            )}
-            {onOpenAddModal && (
-              <button
-                onClick={onOpenAddModal}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-medium shadow-md shadow-cyan-600/20 transition-all"
-              >
-                Add Feed
-              </button>
-            )}
-          </div>
+          {/* Allow loading older content if there's a gap */}
+          {hasMore && (
+            <div ref={loadMoreRef} className="col-span-full flex justify-center pb-8">
+              {isLoadingMore ? (
+                <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <button 
+                  onClick={() => onLoadMore?.()}
+                  className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/10 text-sm font-medium text-slate-200 transition-all shadow-md"
+                >
+                  Keep Searching Older Posts
+                </button>
+              )}
+            </div>
+          )}
         </div>
       ) : (
         <>
@@ -130,7 +147,7 @@ export function FeedGrid({
             ))}
           </div>
 
-          {todayCount > 0 && (items.length > todayCount || hasMore) && (
+          {todayCount > 0 && (items.length > todayCount || !hasMore) && (
             <div className="pt-6 pb-2">
               <div className="glass-panel rounded-2xl p-4 sm:p-5 text-center border border-cyan-500/20 bg-cyan-950/20 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg shadow-cyan-950/30">
                 <div className="flex items-center gap-3">

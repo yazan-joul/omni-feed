@@ -29,12 +29,24 @@ export function useBookmarks() {
           const saved = localStorage.getItem('omnifeed_bookmarks');
           if (saved) {
             const parsed = JSON.parse(saved);
-            if (Array.isArray(parsed)) setBookmarks(parsed);
+            if (Array.isArray(parsed)) {
+              setBookmarks(parsed);
+            } else {
+              setBookmarks([]);
+            }
+          } else {
+            setBookmarks([]);
           }
           const savedRead = localStorage.getItem('omnifeed_read_ids');
           if (savedRead) {
             const parsedRead = JSON.parse(savedRead);
-            if (Array.isArray(parsedRead)) setReadIds(parsedRead);
+            if (Array.isArray(parsedRead)) {
+              setReadIds(parsedRead);
+            } else {
+              setReadIds([]);
+            }
+          } else {
+            setReadIds([]);
           }
         }
       } catch (e) {

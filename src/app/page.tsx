@@ -51,6 +51,9 @@ export default function HomePage() {
   const [syncingSource, setSyncingSource] = useState<FeedSource | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [failedSources, setFailedSources] = useState<string[]>([]);
+  
+  // Cache to preserve loaded pages for each filter state
+  const feedCache = useRef<Record<string, { items: FeedItem[], cursor: string | null, hasMore: boolean }>>({});
 
   // Bookmarks & Custom Sources Hooks
   const {
@@ -75,7 +78,6 @@ export default function HomePage() {
   } = useCustomSources();
 
   const fetchAbortController = useRef<AbortController | null>(null);
-
 
   
   const handleAddSourceAndSync = async (newSource: FeedSource) => {
@@ -109,14 +111,60 @@ export default function HomePage() {
 
   // Fetch Aggregated Feed Data (Only runs on mount, source changes, or manual refresh)
   const fetchFeed = useCallback(async (isLoadMore = false, forceRefresh = false, extraCustomSources: FeedSource[] = []) => {
+    
+    const params = new URLSearchParams();
+
+    // Pass disabled or removed default source IDs
+    const activeDefaultIds = sources.filter((s) => !s.isCustom && s.enabled).map((s) => s.id);
+    const disabledOrRemovedDefaultIds = DEFAULT_FEED_SOURCES.filter(
+      (ds) => !activeDefaultIds.includes(ds.id)
+    ).map((ds) => ds.id);
+
+    if (disabledOrRemovedDefaultIds.length > 0) {
+      params.set('disabledDefaults', JSON.stringify(disabledOrRemovedDefaultIds));
+    }
+
+    // Pass enabled custom sources (merge with any extra sources passed explicitly)
+    const allCustomSources = [
+      ...customOnly.filter((s) => s.enabled),
+      ...extraCustomSources.filter((s) => s.enabled && !customOnly.some((c) => c.id === s.id)),
+    ];
+    if (allCustomSources.length > 0) {
+      params.set('customSources', JSON.stringify(allCustomSources));
+    }
+    
+    if (selectedPlatform !== 'all') {
+      params.set('platform', selectedPlatform);
+    }
+    if (selectedMediaType !== 'all') {
+      params.set('mediaType', selectedMediaType);
+    }
+    if (debouncedSearch) {
+      params.set('search', debouncedSearch);
+    }
+    
+    const cacheKey = params.toString();
+
     if (isLoadMore) {
       setIsLoadingMore(true);
     } else {
+      if (!forceRefresh && feedCache.current[cacheKey]) {
+        // Restore from cache instantly
+        const cached = feedCache.current[cacheKey];
+        setFeedItems(cached.items);
+        cursorRef.current = cached.cursor;
+        setHasMore(cached.hasMore);
+        setIsLoading(false);
+        setError(null);
+        return; // Skip fetch
+      }
+      
       setIsLoading(true);
       cursorRef.current = null;
       setHasMore(true);
-      // We no longer clear setFeedItems([]) here to prevent UI flickering. 
-      // The items will be replaced once the API request completes.
+      if (!forceRefresh) {
+        setFeedItems([]);
+      }
     }
     
     setError(null);
@@ -200,9 +248,29 @@ export default function HomePage() {
 
       if (data.success && Array.isArray(data.items)) {
         if (isLoadMore) {
-          setFeedItems(prev => [...prev, ...data.items]);
+          setFeedItems(prev => {
+            const allItems = [...prev, ...data.items];
+            const uniqueMap = new Map();
+            for (const item of allItems) {
+              if (!uniqueMap.has(item.id)) {
+                uniqueMap.set(item.id, item);
+              }
+            }
+            const newItems = Array.from(uniqueMap.values());
+            feedCache.current[cacheKey] = {
+              items: newItems,
+              cursor: data.nextCursor || null,
+              hasMore: !!data.nextCursor
+            };
+            return newItems;
+          });
         } else {
           setFeedItems(data.items);
+          feedCache.current[cacheKey] = {
+            items: data.items,
+            cursor: data.nextCursor || null,
+            hasMore: !!data.nextCursor
+          };
         }
         cursorRef.current = data.nextCursor || null;
         setHasMore(!!data.nextCursor);
@@ -265,6 +333,7 @@ export default function HomePage() {
   // Handlers
   const handleOpenVideo = (item: FeedItem) => {
     markAsRead(item.id);
+    setActivePodcastItem(null);
     setActiveVideoItem(item);
     trackEvent('play_video', {
       item_id: item.id,

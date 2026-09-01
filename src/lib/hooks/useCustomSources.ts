@@ -39,7 +39,11 @@ export function useCustomSources() {
             const parsed = JSON.parse(savedSources);
             if (Array.isArray(parsed)) {
               setSources(parsed);
+            } else {
+              setSources(DEFAULT_FEED_SOURCES);
             }
+          } else {
+            setSources(DEFAULT_FEED_SOURCES);
           }
           setMounted(true);
         }
