@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { FeedSource } from '../types';
 import { DEFAULT_FEED_SOURCES } from '../config/default-sources';
 import { useAuth } from './useAuth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { dbClient } from '../firebase/client';
 
 export function useCustomSources() {
@@ -16,14 +16,21 @@ export function useCustomSources() {
     // Don't attempt to load sources until Firebase Auth finishes its initial check
     if (authLoading) return;
 
-    const loadData = async () => {
+    let unsubscribe: (() => void) | undefined;
+
+    const loadData = () => {
       try {
         if (user && dbClient) {
           const userRef = doc(dbClient, 'users', user.uid);
-          const snap = await getDoc(userRef);
-          if (snap.exists() && snap.data().sources) {
-            setSources(snap.data().sources);
-          }
+          unsubscribe = onSnapshot(userRef, (snap) => {
+            if (snap.exists() && snap.data().sources) {
+              setSources(snap.data().sources);
+            }
+            setMounted(true);
+          }, (err) => {
+            console.error("Error listening to sources", err);
+            setMounted(true);
+          });
         } else {
           const savedSources = localStorage.getItem('omnifeed_sources');
           if (savedSources) {
@@ -32,13 +39,19 @@ export function useCustomSources() {
               setSources(parsed);
             }
           }
+          setMounted(true);
         }
       } catch (e) {
         console.error("Error loading sources", e);
+        setMounted(true);
       }
-      setMounted(true);
     };
+    
     loadData();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, [user, authLoading]);
 
   // Use a helper function that takes the updated sources so we can save to Firestore
