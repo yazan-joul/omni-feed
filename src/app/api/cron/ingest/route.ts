@@ -99,13 +99,36 @@ async function handleIngest(request: NextRequest) {
       targetSources = targetSources.filter(s => s.platform === platform);
     }
     
+    // Filter out sources that were synced very recently (e.g., within 30 minutes)
+    // This prevents redundant Apify scraping when re-adding streams or spamming refresh.
+    const FRESHNESS_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
+    const now = Date.now();
+    
+    const syncStatusRefs = targetSources.map(s => db.collection('feed_sync_status').doc(s.id));
+    let syncStatusDocs: any[] = [];
+    if (syncStatusRefs.length > 0) {
+      syncStatusDocs = await db.getAll(...syncStatusRefs).catch(() => []);
+    }
+    
+    const sourcesToScrape = targetSources.filter((source, index) => {
+      const doc = syncStatusDocs[index];
+      if (doc && doc.exists) {
+        const lastSyncedAt = doc.data()?.lastSyncedAt || 0;
+        if (now - lastSyncedAt < FRESHNESS_THRESHOLD_MS) {
+          console.log(`[Cache] Skipping ${source.id}, recently synced.`);
+          return false;
+        }
+      }
+      return true;
+    });
+
     const results = await Promise.allSettled(
-      targetSources.map(async (source) => {
+      sourcesToScrape.map(async (source) => {
         let items: FeedItem[] = [];
         
         const isSocial = ['instagram', 'facebook', 'twitter'].includes(source.platform);
         // Generous timeout for background ingestion (60 seconds for social)
-        const timeoutMs = isSocial ? 60000 : 15000;
+        const timeoutMs = isSocial ? 65000 : 15000;
         
         if (source.platform === 'youtube') items = await fetchWithRetry(() => ytAdapter.fetchFeed(source), timeoutMs, source.name);
         else if (source.platform === 'instagram') items = await fetchWithRetry(() => instagramAdapter.fetchFeed(source), timeoutMs, source.name);
@@ -147,6 +170,20 @@ async function handleIngest(request: NextRequest) {
       
       await batch.commit();
     }
+    
+    // Update sync status for successfully scraped sources
+    const statusBatch = db.batch();
+    results.forEach((res, index) => {
+      if (res.status === 'fulfilled') {
+        const source = sourcesToScrape[index];
+        const statusRef = db.collection('feed_sync_status').doc(source.id);
+        statusBatch.set(statusRef, { 
+          lastSyncedAt: Date.now(),
+          platform: source.platform 
+        }, { merge: true });
+      }
+    });
+    await statusBatch.commit();
     
     return NextResponse.json({
       success: true,

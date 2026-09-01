@@ -14,8 +14,14 @@ Adding a new feed stream goes through a unified modal (`AddFeedModal.tsx`) and i
 - Built-in support for importing and exporting feed configurations via the standard OPML (Outline Processor Markup Language) format.
 - Handled via the `/api/opml` route, allowing users to migrate their existing RSS setups seamlessly into OmniFeed, or backup their OmniFeed custom configurations.
 
-## 4. UI View Modes
+## 4. UI View Modes & Responsive Layouts
 The application supports multiple unified feed views:
-- **Grid View**: A dense layout optimized for imagery and video thumbnails, showing cards (`FeedCard`) aligned side-by-side.
-- **List View**: A classic, linear RSS reader-style view, prioritizing text content, summary reading, and chronological scrolling.
+- **Grid (Gallery) View**: A dense, balanced layout optimized for imagery and video thumbnails, showing cards (`FeedCard`) aligned side-by-side with uniform 16:9 media headers, fallback platform placeholders for text-only items, and bounded `line-clamp-2` descriptions to prevent card stretching.
+- **List View**: A classic, linear RSS reader-style view, prioritizing text content, summary reading, and chronological scrolling with horizontal cards (thumbnail left, details center, actions right).
 - Real-time switching between these modes without loss of scroll position, thanks to localized client state.
+
+## 5. Multi-Stream Coexistence & Cache Hydration
+- OmniFeed allows users to subscribe to unlimited concurrent streams belonging to the same platform (e.g., multiple YouTube channels, Subreddits, or RSS feeds).
+- Dynamic custom stream hydration uses single-field Firestore queries (`where('sourceId', '==', id).limit(50)`) coupled with in-memory timestamp sorting to ensure instant responsiveness without requiring composite index configurations.
+- Targeted ingest triggers immediate cache invalidation and forced re-fetch (`forceRefresh=true`), ensuring freshly added streams display instantly in the timeline alongside existing active streams.
+

@@ -70,7 +70,8 @@ export function FeedGrid({
   const dayMs = 24 * 60 * 60 * 1000;
   const isItemToday = (item: FeedItem) => {
     const pubTime = new Date(item.publishedAt).getTime();
-    return isNaN(pubTime) || now - pubTime < dayMs;
+    if (isNaN(pubTime)) return false;
+    return now - pubTime < dayMs;
   };
 
   let todayCount = items.filter(isItemToday).length;
@@ -121,54 +122,61 @@ export function FeedGrid({
       ) : (
         <>
           <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5' : 'space-y-4'}>
-            {items.map((item, i) => {
-              const today = isItemToday(item);
-              const nextItem = items[i + 1];
-              const nextIsToday = nextItem ? isItemToday(nextItem) : false;
-              
-              // Show the divider if this item is today, and the next is not,
-              // OR this is the last item, it is today, and there's no more to load.
-              const showCaughtUp = today && !nextIsToday && (nextItem || !hasMore);
-
-              return (
-                <React.Fragment key={item.id}>
-                  <FeedCard
-                    item={item}
-                    viewMode={viewMode}
-                    isBookmarked={isBookmarked(item.id)}
-                    isRead={isRead(item.id)}
-                    onToggleBookmark={onToggleBookmark}
-                    onToggleRead={onToggleRead}
-                    onOpenVideo={onOpenVideo}
-                    onOpenReader={onOpenReader}
-                    onOpenPodcast={onOpenPodcast}
-                  />
-                  {showCaughtUp && (
-                    <div className="col-span-full pt-6 pb-2">
-                      <div className="glass-panel rounded-2xl p-4 sm:p-5 text-center border border-cyan-500/20 bg-cyan-950/20 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg shadow-cyan-950/30">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center shrink-0">
-                            <CheckCircle2 className="w-5 h-5 text-cyan-400" />
-                          </div>
-                          <div className="text-left">
-                            <h4 className="text-sm font-semibold text-slate-100">You're all caught up for Today</h4>
-                            <p className="text-xs text-slate-400">
-                              {todayCount} fresh stories reviewed from the past 24 hours.
-                            </p>
-                          </div>
-                        </div>
-                        {hasMore || items.length > todayCount ? (
-                          <span className="text-xs text-slate-400 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-white/5">
-                            Earlier content below &darr;
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                  )}
-                </React.Fragment>
-              );
-            })}
+            {items.filter(isItemToday).map(item => (
+              <FeedCard
+                key={item.id}
+                item={item}
+                viewMode={viewMode}
+                isBookmarked={isBookmarked(item.id)}
+                isRead={isRead(item.id)}
+                onToggleBookmark={onToggleBookmark}
+                onToggleRead={onToggleRead}
+                onOpenVideo={onOpenVideo}
+                onOpenReader={onOpenReader}
+                onOpenPodcast={onOpenPodcast}
+              />
+            ))}
           </div>
+
+          {todayCount > 0 && (items.length > todayCount || hasMore) && (
+            <div className="pt-6 pb-2">
+              <div className="glass-panel rounded-2xl p-4 sm:p-5 text-center border border-cyan-500/20 bg-cyan-950/20 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg shadow-cyan-950/30">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="w-5 h-5 text-cyan-400" />
+                  </div>
+                  <div className="text-left">
+                    <h4 className="text-sm font-semibold text-slate-100">You're all caught up for Today</h4>
+                    <p className="text-xs text-slate-400">
+                      {todayCount} fresh stories reviewed from the past 24 hours.
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs text-slate-400 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-white/5">
+                  Earlier content below &darr;
+                </span>
+              </div>
+            </div>
+          )}
+
+          {items.length > todayCount && (
+            <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5' : 'space-y-4'}>
+              {items.filter(i => !isItemToday(i)).map(item => (
+                <FeedCard
+                  key={item.id}
+                  item={item}
+                  viewMode={viewMode}
+                  isBookmarked={isBookmarked(item.id)}
+                  isRead={isRead(item.id)}
+                  onToggleBookmark={onToggleBookmark}
+                  onToggleRead={onToggleRead}
+                  onOpenVideo={onOpenVideo}
+                  onOpenReader={onOpenReader}
+                  onOpenPodcast={onOpenPodcast}
+                />
+              ))}
+            </div>
+          )}
           
           {/* Infinite Scroll Trigger */}
           {hasMore && (

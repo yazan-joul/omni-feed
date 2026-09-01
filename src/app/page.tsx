@@ -92,7 +92,9 @@ export default function HomePage() {
       const data = await res.json();
       console.log(`[Targeted Ingest] Ingested ${data.ingested || 0} items for ${newSource.name}`);
       
-      // Add source to state and trigger useEffect fetchFeed only after data is ingested
+      // Force refresh the frontend cache FIRST
+      await fetchFeed(false, true, [newSource]);
+      // Then add to state (triggers UI render)
       addSource(newSource);
     } catch (err) {
       console.error('Failed to ingest new source:', err);
@@ -277,7 +279,13 @@ export default function HomePage() {
           setFeedItems((prev) => {
             const others = prev.filter((i) => i.platform !== platform);
             const merged = [...others, ...data.items];
-            merged.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+            merged.sort((a, b) => {
+              const tA = new Date(a.publishedAt).getTime();
+              const tB = new Date(b.publishedAt).getTime();
+              const validA = isNaN(tA) ? 0 : tA;
+              const validB = isNaN(tB) ? 0 : tB;
+              return validB - validA;
+            });
             return merged;
           });
           if (data.failedSources) {

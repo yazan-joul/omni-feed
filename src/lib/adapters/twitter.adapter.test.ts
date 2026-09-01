@@ -28,14 +28,16 @@ describe('TwitterAdapter', () => {
     const items = await adapter.fetchFeed(mockSource);
     expect(items).toHaveLength(2);
     
-    // Check first item
+    // Check first item (short tweet)
     expect(items[0].title).toBe('Just launched a new feature! 🚀');
     expect(items[0].author.name).toBe('Dev User');
     expect(items[0].thumbnailUrl).toBe('https://example.com/image.jpg');
+    expect(items[0].summary).toBeUndefined();
     
-    // Check second item (truncation logic)
+    // Check second item (truncation logic and deduplication)
     expect(items[1].title.length).toBeLessThanOrEqual(115);
     expect(items[1].title).toContain('...');
+    expect(items[1].summary).toBeUndefined();
   });
 
   it('should return empty array if API token is missing', async () => {

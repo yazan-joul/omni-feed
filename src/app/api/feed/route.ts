@@ -132,8 +132,7 @@ export async function GET(request: NextRequest) {
               const snap = await withTimeout<any>(
                 db.collection('feed_items')
                   .where('sourceId', '==', missingId)
-                  .orderBy('publishedAt', 'desc')
-                  .limit(parseInt(process.env.FEED_CUSTOM_FETCH_LIMIT || '10', 10))
+                  .limit(parseInt(process.env.FEED_CUSTOM_FETCH_LIMIT || '50', 10))
                   .get(),
                 3000
               );
@@ -143,7 +142,18 @@ export async function GET(request: NextRequest) {
               });
             }
             if (addedNewItems) {
-              globalFeedCache!.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+              const uniqueItems = new Map<string, FeedItem>();
+              for (const item of globalFeedCache!) {
+                uniqueItems.set(item.id, item);
+              }
+              globalFeedCache = Array.from(uniqueItems.values());
+              globalFeedCache.sort((a, b) => {
+                const tA = new Date(a.publishedAt).getTime();
+                const tB = new Date(b.publishedAt).getTime();
+                const validA = isNaN(tA) ? 0 : tA;
+                const validB = isNaN(tB) ? 0 : tB;
+                return validB - validA;
+              });
             }
           } catch (e) {
             console.warn('[Feed] Failed to fetch missing custom source items:', e);

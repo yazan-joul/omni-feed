@@ -32,7 +32,8 @@ vi.mock('@/lib/firebase/admin', () => ({
     }),
     collection: () => ({
       doc: (id: string) => ({ id })
-    })
+    }),
+    getAll: vi.fn().mockResolvedValue([])
   }
 }));
 

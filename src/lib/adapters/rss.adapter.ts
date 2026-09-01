@@ -1,5 +1,6 @@
 import Parser from 'rss-parser';
 import { decodeHtmlEntities } from '../utils/decode';
+import { parseRelativeDate } from '../utils/date';
 import { FeedAdapter } from './types';
 import { FeedItem, FeedSource } from '../types';
 
@@ -134,7 +135,7 @@ export class RSSAdapter implements FeedAdapter {
             name: decodeHtmlEntities((item as any).creator || item.creator || item.author || parsed.title || source.name),
             avatarUrl: parsed.image?.url || `https://ui-avatars.com/api/?name=${encodeURIComponent(source.name)}&background=8b5cf6&color=fff`,
           },
-          publishedAt: item.isoDate || (item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString()),
+          publishedAt: parseRelativeDate(item.isoDate || item.pubDate),
           thumbnailUrl,
           summary: cleanSummary ? `${decodeHtmlEntities(cleanSummary)}...` : undefined,
           content: (item as any).contentEncoded || item.content || cleanSummary,

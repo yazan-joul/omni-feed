@@ -226,7 +226,7 @@ export function FeedCard({
             </h3>
 
             {/* Snippet */}
-            {item.summary && (
+            {item.summary && item.summary !== item.title && (
               <p className="text-xs text-slate-400 line-clamp-1 hidden md:block">
                 {item.summary}
               </p>
@@ -291,25 +291,31 @@ export function FeedCard({
       }`}
     >
       {/* Media Image Header */}
-      {(item.thumbnailUrl || isPodcast) && (
-        <div
-          onClick={handleMediaClick}
-          className="relative aspect-video w-full overflow-hidden bg-slate-950 cursor-pointer"
-        >
-          {shouldRenderThumbnail ? (
-            <>
-              <img
-                src={getImageUrl(item.thumbnailUrl)}
-                alt={item.title}
-                onError={() => setImageFailed(true)}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                loading="lazy"
-              />
-              <div className="absolute inset-0 media-overlay pointer-events-none" />
-            </>
-          ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 via-slate-950 to-cyan-500/10" />
-          )}
+      <div
+        onClick={handleMediaClick}
+        className="relative aspect-[16/9] w-full overflow-hidden bg-slate-950 cursor-pointer"
+      >
+        {shouldRenderThumbnail ? (
+          <>
+            <img
+              src={getImageUrl(item.thumbnailUrl)}
+              alt={item.title}
+              onError={() => setImageFailed(true)}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              loading="lazy"
+            />
+            <div className="absolute inset-0 media-overlay pointer-events-none" />
+          </>
+        ) : (
+          <div className={`absolute inset-0 bg-gradient-to-br ${
+            item.platform === 'instagram' ? 'from-pink-500/20 via-slate-950 to-orange-500/10' :
+            item.platform === 'facebook' ? 'from-blue-500/20 via-slate-950 to-sky-500/10' :
+            item.platform === 'twitter' ? 'from-sky-500/20 via-slate-950 to-blue-500/10' :
+            item.platform === 'reddit' ? 'from-orange-500/20 via-slate-950 to-red-500/10' :
+            item.platform === 'youtube' ? 'from-red-500/20 via-slate-950 to-orange-500/10' :
+            'from-cyan-500/20 via-slate-950 to-emerald-500/10'
+          }`} />
+        )}
 
           {/* Video / Podcast Play Button Overlay */}
           {isVideo && (
@@ -388,8 +394,6 @@ export function FeedCard({
             )}
           </div>
         </div>
-      )}
-
       {/* Card Body */}
       <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
         <div className="space-y-2">
@@ -423,7 +427,7 @@ export function FeedCard({
           </h3>
 
           {/* Summary */}
-          {item.summary && (
+          {item.summary && item.summary !== item.title && (
             <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
               {item.summary}
             </p>

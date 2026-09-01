@@ -2,6 +2,7 @@ import { XMLParser } from 'fast-xml-parser';
 import { FeedAdapter } from './types';
 import { FeedItem, FeedSource } from '../types';
 import { decodeHtmlEntities } from '../utils/decode';
+import { parseRelativeDate } from '../utils/date';
 
 // In-memory channel ID resolution cache to avoid redundant HTML scraping
 const channelIdCache = new Map<string, string>();
@@ -168,7 +169,7 @@ export class YouTubeAdapter implements FeedAdapter {
         const videoId = entry.videoId || entry.id?.replace('yt:video:', '') || '';
         const title = decodeHtmlEntities(entry.title || 'Untitled Video');
         const authorName = decodeHtmlEntities(entry.author?.name || feed.title || source.name);
-        const publishedAt = entry.published || new Date().toISOString();
+        const publishedAt = parseRelativeDate(entry.published || entry.updated);
 
         // Media group elements
         const mediaGroup = entry.group || {};
@@ -188,7 +189,7 @@ export class YouTubeAdapter implements FeedAdapter {
           : undefined;
 
         return {
-          id: `yt-${videoId}`,
+          id: `yt-${source.id}-${videoId}`,
           platform: 'youtube',
           mediaType: 'video',
           title,
@@ -230,7 +231,7 @@ export class YouTubeAdapter implements FeedAdapter {
         const videoId = item.id.videoId;
         const snippet = item.snippet;
         return {
-          id: `yt-${videoId}`,
+          id: `yt-${source.id}-${videoId}`,
           platform: 'youtube',
           mediaType: 'video',
           title: decodeHtmlEntities(snippet.title),
@@ -240,7 +241,7 @@ export class YouTubeAdapter implements FeedAdapter {
             name: decodeHtmlEntities(snippet.channelTitle),
             avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(snippet.channelTitle)}&background=ef4444&color=fff`,
           },
-          publishedAt: snippet.publishedAt,
+          publishedAt: parseRelativeDate(snippet.publishedAt),
           thumbnailUrl: snippet.thumbnails?.high?.url || snippet.thumbnails?.medium?.url,
           summary: decodeHtmlEntities(snippet.description),
           tags: ['Video'],

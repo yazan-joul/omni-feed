@@ -1,6 +1,7 @@
 import { FeedAdapter } from './types';
 import { FeedItem, FeedSource } from '../types';
 import { decodeHtmlEntities } from '../utils/decode';
+import { parseRelativeDate } from '../utils/date';
 
 export class FacebookAdapter implements FeedAdapter {
   readonly platform = 'facebook';
@@ -29,7 +30,7 @@ export class FacebookAdapter implements FeedAdapter {
     try {
       // Call Apify Facebook Posts Scraper actor synchronously
       const response = await fetch(
-        `https://api.apify.com/v2/acts/apify~facebook-posts-scraper/run-sync-get-dataset-items?token=${apiToken}&timeout=45`,
+        `https://api.apify.com/v2/acts/apify~facebook-posts-scraper/run-sync-get-dataset-items?token=${apiToken}&timeout=60`,
         {
           method: 'POST',
           headers: {
@@ -78,7 +79,7 @@ export class FacebookAdapter implements FeedAdapter {
             avatarUrl: post.user?.profilePic || post.pageProfilePic || `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}&background=1877F2&color=fff`,
             handle: post.user?.username ? `@${post.user.username}` : undefined,
           },
-          publishedAt: post.time || post.timestamp || new Date().toISOString(),
+          publishedAt: parseRelativeDate(post.time || post.timestamp),
           thumbnailUrl,
           summary: cleanText ? `${decodeHtmlEntities(cleanText.slice(0, 220))}...` : undefined,
           content: decodeHtmlEntities(rawText),

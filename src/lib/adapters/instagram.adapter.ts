@@ -1,6 +1,7 @@
 import { FeedAdapter } from './types';
 import { FeedItem, FeedSource } from '../types';
 import { decodeHtmlEntities } from '../utils/decode';
+import { parseRelativeDate } from '../utils/date';
 
 export class InstagramAdapter implements FeedAdapter {
   readonly platform = 'instagram';
@@ -31,7 +32,7 @@ export class InstagramAdapter implements FeedAdapter {
     try {
       // 1. Try fast Instagram Profile Scraper (usually 8-12 seconds)
       const profileRes = await fetch(
-        `https://api.apify.com/v2/acts/apify~instagram-profile-scraper/run-sync-get-dataset-items?token=${apiToken}&timeout=30`,
+        `https://api.apify.com/v2/acts/apify~instagram-profile-scraper/run-sync-get-dataset-items?token=${apiToken}&timeout=60`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -79,9 +80,9 @@ export class InstagramAdapter implements FeedAdapter {
                 avatarUrl: authorAvatar,
                 handle: `@${username}`,
               },
-              publishedAt: post.timestamp ? new Date(post.timestamp).toISOString() : new Date().toISOString(),
+              publishedAt: parseRelativeDate(post.timestamp),
               thumbnailUrl,
-              summary: cleanCaption ? `${decodeHtmlEntities(cleanCaption.slice(0, 220))}...` : undefined,
+              summary: undefined,
               content: decodeHtmlEntities(rawCaption),
               metrics: {
                 likes: post.likesCount ? Number(post.likesCount).toLocaleString() : post.likesCount,
@@ -99,7 +100,7 @@ export class InstagramAdapter implements FeedAdapter {
 
       // 2. Fallback to standard Instagram scraper
       const response = await fetch(
-        `https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=${apiToken}&timeout=45`,
+        `https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=${apiToken}&timeout=60`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -140,9 +141,9 @@ export class InstagramAdapter implements FeedAdapter {
             avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}&background=e1306c&color=fff`,
             handle: post.ownerUsername ? `@${post.ownerUsername}` : `@${username}`,
           },
-          publishedAt: post.timestamp ? new Date(post.timestamp).toISOString() : new Date().toISOString(),
+          publishedAt: parseRelativeDate(post.timestamp),
           thumbnailUrl,
-          summary: cleanCaption ? `${decodeHtmlEntities(cleanCaption.slice(0, 220))}...` : undefined,
+          summary: undefined,
           content: decodeHtmlEntities(rawCaption),
           metrics: {
             likes: post.likesCount ? Number(post.likesCount).toLocaleString() : undefined,

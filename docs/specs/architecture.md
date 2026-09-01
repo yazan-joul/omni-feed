@@ -25,10 +25,12 @@ OmniFeed integrates with 6 distinct platforms via specialized adapters that impl
 To prevent duplication during cron ingestions, every item generates a stable, deterministic ID based on its origin properties:
 - Generates a base64 encoded safe ID from the unique string identifier.
 - Replaces unsafe characters (`/`, `+`, `=`) with `_`.
-- Format: `[platform]-[sourceId]-[postId/index]` natively in the adapter, which then gets base64 encoded to act as a safe Firestore Document ID.
+- Format: `[platform]-[sourceId]-[postId/videoId/index]` natively in all adapters (e.g. `yt-${source.id}-${videoId}`), ensuring isolation between multiple channels/streams on the same platform.
 
 ## 4. Ingestion Engine & Safeguards
 - **Cron Job (`/api/cron/ingest`)**: Regularly fetches updates from all active custom and default sources.
+- **Single-Source & Dynamic Sync**: `/api/cron/ingest?sourceId=...` ingests a specific stream and merges it into Firestore. Cache hydration fetches documents using single-field queries and sorts in memory to avoid blocking on Firestore composite indexes.
+
 - **Timeouts**: Generous but hard-capped timeouts (e.g., 60s for social/Apify, 15s for RSS/YouTube).
 - **Apify Safeguards**: Hard limits on `resultsLimit` (e.g., max 6 posts) and timeout constraints embedded directly in Apify fetch calls to prevent credit exhaustion.
 - **Error Handling**: Graceful fallback per adapter if a single source fails, without crashing the entire batch ingestion. Implements an exponential backoff for retries (`fetchWithRetry`).

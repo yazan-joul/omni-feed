@@ -1,6 +1,7 @@
 import { FeedAdapter } from './types';
 import { FeedItem, FeedSource } from '../types';
 import { decodeHtmlEntities } from '../utils/decode';
+import { parseRelativeDate } from '../utils/date';
 
 export class TwitterAdapter implements FeedAdapter {
   readonly platform = 'twitter';
@@ -29,7 +30,7 @@ export class TwitterAdapter implements FeedAdapter {
     try {
       // Call Apify X Profile Posts Scraper actor synchronously
       const response = await fetch(
-        `https://api.apify.com/v2/acts/scraper_one~x-profile-posts-scraper/run-sync-get-dataset-items?token=${apiToken}&timeout=45`,
+        `https://api.apify.com/v2/acts/scraper_one~x-profile-posts-scraper/run-sync-get-dataset-items?token=${apiToken}&timeout=60`,
         {
           method: 'POST',
           headers: {
@@ -108,15 +109,7 @@ export class TwitterAdapter implements FeedAdapter {
           post.author?.profileImageUrl ||
           `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}&background=0284c7&color=fff`;
 
-        let publishedAt = new Date().toISOString();
-        if (post.timestamp) {
-          const t = typeof post.timestamp === 'number' ? post.timestamp : Number(post.timestamp);
-          if (!isNaN(t)) publishedAt = new Date(t).toISOString();
-          else if (typeof post.timestamp === 'string') publishedAt = new Date(post.timestamp).toISOString();
-        } else if (post.createdAt || post.created_at) {
-          publishedAt = new Date(post.createdAt || post.created_at).toISOString();
-        }
-
+        const publishedAt = parseRelativeDate(post.timestamp || post.createdAt || post.created_at);
         return {
           id: `tw-${source.id}-${post.postId || post.conversationId || post.id || index}`,
           platform: 'twitter',
@@ -130,7 +123,7 @@ export class TwitterAdapter implements FeedAdapter {
           },
           publishedAt,
           thumbnailUrl,
-          summary: cleanText ? `${decodeHtmlEntities(cleanText.slice(0, 220))}...` : undefined,
+          summary: undefined,
           content: decodeHtmlEntities(rawText),
           metrics: {
             likes: post.favouriteCount ?? post.likeCount ?? post.favorite_count ?? 0,

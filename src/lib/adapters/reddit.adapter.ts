@@ -2,6 +2,7 @@ import Parser from 'rss-parser';
 import { FeedAdapter } from './types';
 import { FeedItem, FeedSource } from '../types';
 import { decodeHtmlEntities } from '../utils/decode';
+import { parseRelativeDate } from '../utils/date';
 
 export class RedditAdapter implements FeedAdapter {
   readonly platform = 'reddit';
@@ -74,7 +75,7 @@ export class RedditAdapter implements FeedAdapter {
               name: decodeHtmlEntities(authorName),
               avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName.replace(/^\/u\//, ''))}&background=FF4500&color=fff`,
             },
-            publishedAt: item.isoDate || (item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString()),
+            publishedAt: parseRelativeDate(item.isoDate || item.pubDate),
             thumbnailUrl,
             summary: cleanText ? `${decodeHtmlEntities(cleanText.slice(0, 220))}...` : undefined,
             content: decodeHtmlEntities(cleanText || rawContent),
