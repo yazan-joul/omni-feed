@@ -8,11 +8,14 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { dbClient } from '../firebase/client';
 
 export function useCustomSources() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [sources, setSources] = useState<FeedSource[]>(DEFAULT_FEED_SOURCES);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // Don't attempt to load sources until Firebase Auth finishes its initial check
+    if (authLoading) return;
+
     const loadData = async () => {
       try {
         if (user && dbClient) {
@@ -36,10 +39,10 @@ export function useCustomSources() {
       setMounted(true);
     };
     loadData();
-  }, [user]);
+  }, [user, authLoading]);
 
-  const saveSources = async (newSources: FeedSource[]) => {
-    setSources(newSources);
+  // Use a helper function that takes the updated sources so we can save to Firestore
+  const persistSources = async (newSources: FeedSource[]) => {
     try {
       if (user && dbClient) {
         const userRef = doc(dbClient, 'users', user.uid);
@@ -58,30 +61,45 @@ export function useCustomSources() {
   };
 
   const addSource = (newSource: FeedSource) => {
-    const updated = [newSource, ...sources];
-    saveSources(updated);
+    setSources(prev => {
+      const updated = [newSource, ...prev];
+      persistSources(updated);
+      return updated;
+    });
   };
 
   const removeSource = (id: string) => {
-    const updated = sources.filter((s) => s.id !== id);
-    saveSources(updated);
+    setSources(prev => {
+      const updated = prev.filter((s) => s.id !== id);
+      persistSources(updated);
+      return updated;
+    });
   };
 
   const toggleSource = (id: string) => {
-    const updated = sources.map((s) => (s.id === id ? { ...s, enabled: !s.enabled } : s));
-    saveSources(updated);
+    setSources(prev => {
+      const updated = prev.map((s) => (s.id === id ? { ...s, enabled: !s.enabled } : s));
+      persistSources(updated);
+      return updated;
+    });
   };
 
   const resetToDefault = () => {
-    saveSources(DEFAULT_FEED_SOURCES);
+    setSources(DEFAULT_FEED_SOURCES);
+    persistSources(DEFAULT_FEED_SOURCES);
   };
 
   const importSources = (newSources: FeedSource[]): number => {
-    const existingUrls = new Set(sources.map((s) => s.url.toLowerCase().trim()));
-    const toAdd = newSources.filter((s) => !existingUrls.has(s.url.toLowerCase().trim()));
-    const updated = [...toAdd, ...sources];
-    saveSources(updated);
-    return toAdd.length;
+    let addedCount = 0;
+    setSources(prev => {
+      const existingUrls = new Set(prev.map((s) => s.url.toLowerCase().trim()));
+      const toAdd = newSources.filter((s) => !existingUrls.has(s.url.toLowerCase().trim()));
+      addedCount = toAdd.length;
+      const updated = [...toAdd, ...prev];
+      persistSources(updated);
+      return updated;
+    });
+    return addedCount;
   };
 
   const customOnly = useMemo(() => sources.filter((s) => s.isCustom), [sources]);
