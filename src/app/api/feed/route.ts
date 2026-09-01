@@ -41,7 +41,23 @@ async function refreshCache() {
         items.push({ id: doc.id, ...doc.data() } as FeedItem);
       });
 
-      globalFeedCache = items;
+      if (globalFeedCache) {
+        const defaultSourceIds = new Set(DEFAULT_FEED_SOURCES.map(ds => ds.id));
+        const customItems = globalFeedCache.filter(item => !defaultSourceIds.has(item.sourceId));
+        const uniqueItems = new Map<string, FeedItem>();
+        for (const item of items) uniqueItems.set(item.id, item);
+        for (const item of customItems) uniqueItems.set(item.id, item);
+        
+        const newCache = Array.from(uniqueItems.values());
+        newCache.sort((a, b) => {
+          const tA = new Date(a.publishedAt).getTime();
+          const tB = new Date(b.publishedAt).getTime();
+          return (isNaN(tB) ? 0 : tB) - (isNaN(tA) ? 0 : tA);
+        });
+        globalFeedCache = newCache.slice(0, CACHE_SIZE);
+      } else {
+        globalFeedCache = items;
+      }
       lastCacheTime = Date.now();
       console.log(`[Cache] Background refresh complete. Loaded ${items.length} items.`);
     } catch (error) {
@@ -109,86 +125,93 @@ export async function GET(request: NextRequest) {
   try {
     const TARGET_ITEMS = parseInt(process.env.FEED_TARGET_ITEMS || '24', 10); 
     
+    let validItems: FeedItem[] = [];
+    let currentCursor = cursor;
+
     // ==========================================
-    // FAST PATH: Initial Load (No Cursor) -> Memory Cache
+    // FAST PATH: Memory Cache
     // ==========================================
-    if (!cursor) {
-      if (!globalFeedCache || forceRefresh) {
-        // Block and fetch if cache is totally empty or forced
-        await refreshCache();
-      } else if (Date.now() - lastCacheTime > CACHE_TTL) {
-        // Stale-While-Revalidate: Trigger background refresh without blocking user
-        refreshCache();
+    if (!globalFeedCache || forceRefresh) {
+      await refreshCache();
+    } else if (Date.now() - lastCacheTime > CACHE_TTL) {
+      refreshCache();
+    }
+
+    if (globalFeedCache) {
+      // First check which custom source IDs actually have items in cache
+      const cachedSourceIds = new Set(globalFeedCache.map(i => i.sourceId));
+      const defaultSourceIds = new Set(DEFAULT_FEED_SOURCES.map(ds => ds.id));
+      const missingCustomIds = [...activeSourceIds].filter(id => 
+        !defaultSourceIds.has(id) && !cachedSourceIds.has(id)
+      );
+      
+      // If any custom sources have no items in cache, fetch them directly from Firestore
+      if (missingCustomIds.length > 0) {
+        try {
+          let addedNewItems = false;
+          
+          // Firebase 'in' queries support max 30 items
+          const chunkSize = 30;
+          const chunks = [];
+          for (let i = 0; i < missingCustomIds.length; i += chunkSize) {
+            chunks.push(missingCustomIds.slice(i, i + chunkSize));
+          }
+
+          const fetchPromises = chunks.map(chunk => 
+            withTimeout<any>(
+              db.collection('feed_items')
+                .where('sourceId', 'in', chunk)
+                .orderBy('publishedAt', 'desc')
+                .limit(parseInt(process.env.FEED_CUSTOM_FETCH_LIMIT || '50', 10))
+                .get(),
+              15000
+            )
+          );
+
+          const results = await Promise.allSettled(fetchPromises);
+          
+          const tempNewItems: FeedItem[] = [];
+          results.forEach(result => {
+            if (result.status === 'fulfilled' && !result.value.empty) {
+              result.value.forEach((doc: any) => {
+                tempNewItems.push({ id: doc.id, ...doc.data() } as FeedItem);
+                addedNewItems = true;
+              });
+            }
+          });
+
+          if (addedNewItems) {
+            const uniqueItems = new Map<string, FeedItem>();
+            for (const item of globalFeedCache!) {
+              uniqueItems.set(item.id, item);
+            }
+            for (const item of tempNewItems) {
+              uniqueItems.set(item.id, item);
+            }
+            const newCache = Array.from(uniqueItems.values());
+            newCache.sort((a, b) => {
+              const tA = new Date(a.publishedAt).getTime();
+              const tB = new Date(b.publishedAt).getTime();
+              const validA = isNaN(tA) ? 0 : tA;
+              const validB = isNaN(tB) ? 0 : tB;
+              return validB - validA;
+            });
+            globalFeedCache = newCache.slice(0, CACHE_SIZE);
+          }
+        } catch (e) {
+          console.warn('[Feed] Failed to fetch missing custom source items:', e);
+        }
       }
 
-      if (globalFeedCache) {
-        // First check which custom source IDs actually have items in cache
-        const cachedSourceIds = new Set(globalFeedCache.map(i => i.sourceId));
-        const defaultSourceIds = new Set(DEFAULT_FEED_SOURCES.map(ds => ds.id));
-        const missingCustomIds = [...activeSourceIds].filter(id => 
-          !defaultSourceIds.has(id) && !cachedSourceIds.has(id)
-        );
-        
-        // If any custom sources have no items in cache, fetch them directly from Firestore
-        if (missingCustomIds.length > 0) {
-          try {
-            let addedNewItems = false;
-            
-            // Firebase 'in' queries support max 30 items
-            const chunkSize = 30;
-            const chunks = [];
-            for (let i = 0; i < missingCustomIds.length; i += chunkSize) {
-              chunks.push(missingCustomIds.slice(i, i + chunkSize));
-            }
+      let startIndex = 0;
+      if (currentCursor) {
+        const idx = globalFeedCache.findIndex(i => i.publishedAt === currentCursor);
+        startIndex = idx !== -1 ? idx + 1 : -1;
+      }
 
-            const fetchPromises = chunks.map(chunk => 
-              withTimeout<any>(
-                db.collection('feed_items')
-                  .where('sourceId', 'in', chunk)
-                  .limit(parseInt(process.env.FEED_CUSTOM_FETCH_LIMIT || '50', 10))
-                  .get(),
-                15000
-              )
-            );
-
-            const results = await Promise.allSettled(fetchPromises);
-            
-            const tempNewItems: FeedItem[] = [];
-            results.forEach(result => {
-              if (result.status === 'fulfilled' && !result.value.empty) {
-                result.value.forEach((doc: any) => {
-                  tempNewItems.push({ id: doc.id, ...doc.data() } as FeedItem);
-                  addedNewItems = true;
-                });
-              }
-            });
-
-            if (addedNewItems) {
-              const uniqueItems = new Map<string, FeedItem>();
-              for (const item of globalFeedCache!) {
-                uniqueItems.set(item.id, item);
-              }
-              for (const item of tempNewItems) {
-                uniqueItems.set(item.id, item);
-              }
-              const newCache = Array.from(uniqueItems.values());
-              newCache.sort((a, b) => {
-                const tA = new Date(a.publishedAt).getTime();
-                const tB = new Date(b.publishedAt).getTime();
-                const validA = isNaN(tA) ? 0 : tA;
-                const validB = isNaN(tB) ? 0 : tB;
-                return validB - validA;
-              });
-              globalFeedCache = newCache;
-            }
-          } catch (e) {
-            console.warn('[Feed] Failed to fetch missing custom source items:', e);
-          }
-        }
-
-        const validItems: FeedItem[] = [];
-
-        for (const item of globalFeedCache) {
+      if (startIndex !== -1) {
+        for (let i = startIndex; i < globalFeedCache.length; i++) {
+          const item = globalFeedCache[i];
           if (!activeSourceIds.has(item.sourceId)) continue;
           if (mediaType && mediaType !== 'all' && item.mediaType !== mediaType) continue;
           if (search) {
@@ -202,22 +225,26 @@ export async function GET(request: NextRequest) {
           }
 
           validItems.push(item);
+          currentCursor = item.publishedAt;
           if (validItems.length >= TARGET_ITEMS) break; 
         }
 
-        const nextCursor = validItems.length > 0 ? validItems[validItems.length - 1].publishedAt : null;
-
-        if (validItems.length > 0) {
+        if (validItems.length >= TARGET_ITEMS) {
           return NextResponse.json({
             success: true,
             count: validItems.length,
             items: validItems,
-            nextCursor,
+            nextCursor: currentCursor,
             sourcesCount: activeSourceIds.size,
             failedSources: [],
           });
         }
-        // If validItems.length === 0, fall through to DEEP PATH (Firestore)
+        
+        // If we exhausted cache without filling TARGET_ITEMS, 
+        // set currentCursor to the LAST item in the cache so DEEP PATH can pick up perfectly.
+        if (globalFeedCache.length > 0) {
+          currentCursor = globalFeedCache[globalFeedCache.length - 1].publishedAt;
+        }
       }
     }
 
@@ -225,8 +252,6 @@ export async function GET(request: NextRequest) {
     // DEEP PATH: Load More / Cursor -> Firestore DB
     // ==========================================
     const MAX_LOOPS = parseInt(process.env.FEED_MAX_DB_LOOPS || '5', 10); 
-    let validItems: FeedItem[] = [];
-    let currentCursor = cursor;
     let loops = 0;
     let hasMoreInDb = true;
 

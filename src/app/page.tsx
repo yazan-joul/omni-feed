@@ -162,9 +162,6 @@ export default function HomePage() {
       setIsLoading(true);
       cursorRef.current = null;
       setHasMore(true);
-      if (!forceRefresh) {
-        setFeedItems([]);
-      }
     }
     
     setError(null);
@@ -248,6 +245,7 @@ export default function HomePage() {
 
       if (data.success && Array.isArray(data.items)) {
         if (isLoadMore) {
+          let updatedItems: FeedItem[] = [];
           setFeedItems(prev => {
             const allItems = [...prev, ...data.items];
             const uniqueMap = new Map();
@@ -264,13 +262,14 @@ export default function HomePage() {
               const validB = isNaN(tB) ? 0 : tB;
               return validB - validA;
             });
-            feedCache.current[cacheKey] = {
-              items: newItems,
-              cursor: data.nextCursor || null,
-              hasMore: !!data.nextCursor
-            };
+            updatedItems = newItems;
             return newItems;
           });
+          feedCache.current[cacheKey] = {
+            items: updatedItems,
+            cursor: data.nextCursor || null,
+            hasMore: !!data.nextCursor
+          };
         } else {
           setFeedItems(data.items);
           feedCache.current[cacheKey] = {
@@ -382,7 +381,7 @@ export default function HomePage() {
         const matchesTitle = item.title.toLowerCase().includes(q);
         const matchesSummary = item.summary?.toLowerCase().includes(q);
         const matchesAuthor = item.author.name.toLowerCase().includes(q);
-        const matchesTags = item.tags.some((t) => t.toLowerCase().includes(q));
+        const matchesTags = item.tags?.some((t) => t.toLowerCase().includes(q)) ?? false;
         if (!matchesTitle && !matchesSummary && !matchesAuthor && !matchesTags) {
           return false;
         }

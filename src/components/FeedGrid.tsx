@@ -38,7 +38,7 @@ export function FeedGrid({
   failedSources = [],
   isBookmarksView = false,
 }: FeedGridProps) {
-  const loadMoreRef = useRef<HTMLDivElement>(null);
+
 
   // Removed auto-infinite scroll so we don't aggressively fill the grid
   // Users will click "Load More" manually if they want older content.
@@ -119,7 +119,7 @@ export function FeedGrid({
           </div>
           {/* Allow loading older content if there's a gap */}
           {hasMore && (
-            <div ref={loadMoreRef} className="col-span-full flex justify-center pb-8">
+            <div className="col-span-full flex justify-center pb-8">
               {isLoadingMore ? (
                 <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
               ) : (
@@ -190,7 +190,7 @@ export function FeedGrid({
           
           {/* Infinite Scroll Trigger */}
           {hasMore && (
-            <div ref={loadMoreRef} className="col-span-full flex justify-center py-8">
+            <div className="col-span-full flex justify-center py-8">
               {isLoadingMore ? (
                 <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
               ) : (
